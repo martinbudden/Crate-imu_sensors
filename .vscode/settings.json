@@ -1,0 +1,30 @@
+{
+    "cSpell.words": [
+        "Betaflight",
+        "Budden",
+        "calib",
+        "CLKSEL",
+        "defmt",
+        "DHCX",
+        "DLPF",
+        "DRDY",
+        "DSOX",
+        "FSYNCH",
+        "LSMDS",
+        "metapac",
+        "MGMT",
+        "OUTX",
+        "OUTY",
+        "OUTZ",
+        "Pico",
+        "println",
+        "USRH",
+        "USRL",
+        "XNEG",
+        "XOUT",
+        "YNEG",
+        "YOUT",
+        "ZNEG",
+        "ZOUT"
+    ]
+}
