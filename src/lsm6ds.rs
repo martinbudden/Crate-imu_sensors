@@ -141,7 +141,7 @@ impl ImuState {
         gyro_sensitivity: u8,
         acc_sensitivity: u8,
     ) -> (u8, u8) {
-        let gyro_odr = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 3332{
+        let gyro_odr = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 3332 {
             GYRO_ODR_6664_HZ
         } else if target_output_data_rate_hz > 1666 {
             GYRO_ODR_3332_HZ
@@ -193,7 +193,8 @@ impl ImuState {
                 gyro_register_value = GYRO_RANGE_1000_DPS | gyro_odr;
                 self.gyro_scale_dps = 1000.0 / 32768.0;
             }
-            _  => { // default includes ImuState::GYRO_FULL_SCALE_2000_DPS
+            _ => {
+                // default includes ImuState::GYRO_FULL_SCALE_2000_DPS
                 //self._bus.write_register(REG_CTRL2_G, GYRO_RANGE_2000_DPS | gyro_odr).await;
                 gyro_register_value = GYRO_RANGE_2000_DPS | gyro_odr;
                 self.gyro_scale_dps = 2000.0 / 32768.0;
@@ -248,7 +249,8 @@ impl ImuState {
                 acc_register_value = ACC_RANGE_8G | acc_odr;
                 self.acc_scale = 8.0 / 32768.0;
             }
-            _  => { // default includes  ImuState::ACC_FULL_SCALE_16G
+            _ => {
+                // default includes  ImuState::ACC_FULL_SCALE_16G
                 acc_register_value = ACC_RANGE_16G | acc_odr;
                 self.acc_scale = 16.0 / 32768.0;
             }
