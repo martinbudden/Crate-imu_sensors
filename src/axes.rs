@@ -52,8 +52,8 @@ pub enum ImuAxesOrder {
 
 impl ImuAxesOrder {
     pub fn map_vector(self, data: &Vector3df32) -> Vector3df32 {
-        const SIN45F: f32 = 0.70710678118_f32;
-        const COS45F: f32 = 0.70710678118_f32;
+        const SIN45F: f32 = 0.707_106_77_f32;
+        const COS45F: f32 = 0.707_106_77_f32;
 
         match self {
             ImuAxesOrder::XPOS_YPOS_ZPOS => *data,
@@ -226,8 +226,8 @@ impl ImuAxesOrder {
                 },
             }
         } else {
-            const SIN45F: f32 = 0.70710678118_f32;
-            const COS45F: f32 = 0.70710678118_f32;
+            const SIN45F: f32 = core::f32::consts::FRAC_1_SQRT_2;
+            const COS45F: f32 = core::f32::consts::FRAC_1_SQRT_2;
             const SIN135F: f32 = SIN45F;
             const COS135F: f32 = -COS45F;
             const SIN225F: f32 = -SIN45F;

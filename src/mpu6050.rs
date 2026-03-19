@@ -95,10 +95,8 @@ impl ImuState {
         gyro_sensitivity: u8,
         acc_sensitivity: u8,
     ) -> (u8, u8) {
-        let gyro_sample_rate_divider = if target_output_data_rate_hz == 0 {
-            0 // default to 8kHz
-        } else if target_output_data_rate_hz > 4000 {
-            0 // div by 1
+        let gyro_sample_rate_divider = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 4000 {
+            0 // div by 1, ie 8kHz
         } else if target_output_data_rate_hz > 2000 {
             1 // div by 2
         } else if target_output_data_rate_hz > 1000 {
@@ -176,8 +174,7 @@ impl ImuState {
             z: i16::from_be_bytes([buf[4], buf[5]]),
         };
         let acc = Vector3df32::from(acc16) * self.acc_scale - self.acc_offset;
-        let acc = ImuAxesOrder::map_vector(axis_order, &acc);
-        acc
+        ImuAxesOrder::map_vector(axis_order, &acc)
     }
     fn map_mpu6050_gyro_rps(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let gyro16 = Vector3di16 {
@@ -238,12 +235,12 @@ impl<B: ImuBus> Mpu6050<B> {
 
     pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
         Self {
-            bus: bus,
+            bus,
             state: ImuState::default(),
             config: ImuConfig {
                 gyro_id_msp: ImuConfig::MSP_GYRO_ID_MPU6050,
                 acc_id_msp: ImuConfig::MSP_ACC_ID_MPU6050,
-                axis_order: axis_order,
+                axis_order,
                 device_id: Self::DEVICE_ID,
                 flags: 0,
             },

@@ -97,8 +97,7 @@ impl ImuState {
             z: i16::from_be_bytes([buf[4], buf[5]]),
         };
         let acc = Vector3df32::from(acc16) * self.acc_scale - self.acc_offset;
-        let acc = ImuAxesOrder::map_vector(axis_order, &acc);
-        acc
+        ImuAxesOrder::map_vector(axis_order, &acc)
     }
     fn map_mpu6886_gyro_rps(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let gyro16 = Vector3di16 {

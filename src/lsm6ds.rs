@@ -141,9 +141,7 @@ impl ImuState {
         gyro_sensitivity: u8,
         acc_sensitivity: u8,
     ) -> (u8, u8) {
-        let gyro_odr = if target_output_data_rate_hz == 0 {
-            GYRO_ODR_6664_HZ
-        } else if target_output_data_rate_hz > 3332 {
+        let gyro_odr = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 3332{
             GYRO_ODR_6664_HZ
         } else if target_output_data_rate_hz > 1666 {
             GYRO_ODR_3332_HZ
@@ -195,16 +193,14 @@ impl ImuState {
                 gyro_register_value = GYRO_RANGE_1000_DPS | gyro_odr;
                 self.gyro_scale_dps = 1000.0 / 32768.0;
             }
-            _ | ImuState::GYRO_FULL_SCALE_2000_DPS => {
+            _  => { // default includes ImuState::GYRO_FULL_SCALE_2000_DPS
                 //self._bus.write_register(REG_CTRL2_G, GYRO_RANGE_2000_DPS | gyro_odr).await;
                 gyro_register_value = GYRO_RANGE_2000_DPS | gyro_odr;
                 self.gyro_scale_dps = 2000.0 / 32768.0;
             }
         }
 
-        let acc_odr = if target_output_data_rate_hz == 0 {
-            ACC_ODR_6664_HZ
-        } else if target_output_data_rate_hz > 3332 {
+        let acc_odr = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 3332 {
             ACC_ODR_6664_HZ
         } else if target_output_data_rate_hz > 1666 {
             ACC_ODR_3332_HZ
@@ -252,7 +248,7 @@ impl ImuState {
                 acc_register_value = ACC_RANGE_8G | acc_odr;
                 self.acc_scale = 8.0 / 32768.0;
             }
-            _ | ImuState::ACC_FULL_SCALE_16G => {
+            _  => { // default includes  ImuState::ACC_FULL_SCALE_16G
                 acc_register_value = ACC_RANGE_16G | acc_odr;
                 self.acc_scale = 16.0 / 32768.0;
             }
@@ -266,8 +262,7 @@ impl ImuState {
             z: i16::from_le_bytes([buf[4], buf[5]]),
         };
         let acc = Vector3df32::from(acc16) * self.acc_scale - self.acc_offset;
-        let acc = ImuAxesOrder::map_vector(axis_order, &acc);
-        acc
+        ImuAxesOrder::map_vector(axis_order, &acc)
     }
     fn map_lsm6ds_gyro_rps(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let gyro16 = Vector3di16 {
@@ -310,12 +305,12 @@ impl<B: ImuBus> Lsm6ds<B> {
 
     pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
         Self {
-            bus: bus,
+            bus,
             state: ImuState::default(),
             config: ImuConfig {
                 gyro_id_msp: ImuConfig::MSP_GYRO_ID_LSM6DS,
                 acc_id_msp: ImuConfig::MSP_ACC_ID_LSM6DS,
-                axis_order: axis_order,
+                axis_order,
                 device_id: Self::DEVICE_ID,
                 flags: 0,
             },
