@@ -2,7 +2,7 @@
 
 use vector_quaternion_matrix::{Vector3df32, Vector3di16};
 
-use crate::{I2cInterface, Imu, ImuAxesOrder, ImuBus, ImuConfig, ImuReading, ImuState};
+use crate::{I2cInterface, Imu, ImuAxesOrder, ImuBus, ImuConfig, ImuReadingf32, ImuState};
 
 //use core::{future::Future, marker::PhantomData};
 use embedded_hal_async::i2c::{self, I2c};
@@ -183,7 +183,7 @@ impl ImuState {
         let gyro_rps = Vector3df32::from(gyro16) * self.gyro_scale_rps - self.gyro_offset;
         ImuAxesOrder::map_vector(axis_order, &gyro_rps)
     }
-    pub fn map_mpu6050_acc_gyro_rps(&mut self, buf: [u8; 14], axis_order: ImuAxesOrder) -> ImuReading {
+    pub fn map_mpu6050_acc_gyro_rps(&mut self, buf: [u8; 14], axis_order: ImuAxesOrder) -> ImuReadingf32 {
         let acc16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
             y: i16::from_be_bytes([buf[2], buf[3]]),
@@ -195,7 +195,7 @@ impl ImuState {
             y: i16::from_be_bytes([buf[10], buf[11]]),
             z: i16::from_be_bytes([buf[12], buf[13]]),
         };
-        let imu_reading = ImuReading {
+        let imu_reading = ImuReadingf32 {
             acc: Vector3df32::from(acc16) * self.acc_scale - self.acc_offset,
             gyro_rps: Vector3df32::from(gyro16) * self.gyro_scale_rps - self.gyro_offset,
         };
@@ -291,7 +291,7 @@ impl<B: ImuBus> Imu for Mpu6050<B> {
     }
 
     //fn read_acc_gyro_rps(&mut self) -> impl core::future::Future<Output = Result<(),Self::Error>> {
-    fn read_acc_gyro_rps(&mut self) -> ImuReading {
+    fn read_acc_gyro_rps(&mut self) -> ImuReadingf32 {
         let buf = [0u8; 14];
         //self.bus().read_registers(REG_ACCEL_XOUT_H, &mut buf).await;
         self.state.map_mpu6050_acc_gyro_rps(buf, self.config.axis_order)

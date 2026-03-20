@@ -1,5 +1,5 @@
 use crate::ImuAxesOrder;
-use vector_quaternion_matrix::Vector3df32;
+use vector_quaternion_matrix::{Vector3d, Vector3df32};
 
 // Wrapper for I2C
 pub struct I2cInterface<B> {
@@ -124,10 +124,13 @@ impl ImuConfig {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct ImuReading {
-    pub acc: Vector3df32,
-    pub gyro_rps: Vector3df32,
+pub struct ImuReading<T> {
+    pub acc: Vector3d<T>,
+    pub gyro_rps: Vector3d<T>,
 }
+
+pub type ImuReadingf32 = ImuReading<f32>;
+pub type ImuReadingf64 = ImuReading<f64>;
 
 #[repr(u8)]
 pub enum AccScale {
@@ -164,7 +167,7 @@ pub trait Imu {
     //async fn read_acc(&mut self) -> impl core::future::Future<Output = Result<(), Self::Error>>;
     fn read_gyro_rps(&mut self) -> Vector3df32;
     fn read_acc(&mut self) -> Vector3df32;
-    fn read_acc_gyro_rps(&mut self) -> ImuReading;
+    fn read_acc_gyro_rps(&mut self) -> ImuReadingf32;
 
     fn gyro_offset(&self) -> Vector3df32 {
         self.state().gyro_offset

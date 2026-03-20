@@ -2,7 +2,7 @@
 
 use vector_quaternion_matrix::{Vector3df32, Vector3di16};
 
-use crate::{ImuAxesOrder, ImuReading, ImuState};
+use crate::{ImuAxesOrder, ImuReadingf32, ImuState};
 
 const REG_XG_OFFS_TC_H: u8 = 0x04;
 const REG_XG_OFFS_TC_L: u8 = 0x05;
@@ -108,7 +108,7 @@ impl ImuState {
         let gyro_rps = Vector3df32::from(gyro16) * self.gyro_scale_rps - self.gyro_offset;
         ImuAxesOrder::map_vector(axis_order, &gyro_rps)
     }
-    pub fn map_mpu6886_acc_gyro_rps(&mut self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReading {
+    pub fn map_mpu6886_acc_gyro_rps(&mut self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReadingf32 {
         let gyro16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
             y: i16::from_be_bytes([buf[2], buf[3]]),
@@ -119,7 +119,7 @@ impl ImuState {
             y: i16::from_be_bytes([buf[8], buf[9]]),
             z: i16::from_be_bytes([buf[10], buf[11]]),
         };
-        let imu_reading = ImuReading {
+        let imu_reading = ImuReadingf32 {
             acc: Vector3df32::from(acc16) * self.acc_scale - self.acc_offset,
             gyro_rps: Vector3df32::from(gyro16) * self.gyro_scale_rps - self.gyro_offset,
         };
@@ -135,7 +135,7 @@ mod tests {
 
     #[test]
     fn normal_types() {
-        is_normal::<ImuReading>();
+        is_normal::<ImuReadingf32>();
     }
     #[test]
     fn imu_state_init_mpu6886() {

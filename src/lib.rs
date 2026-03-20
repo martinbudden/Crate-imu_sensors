@@ -11,4 +11,6 @@ mod mpu6050;
 mod mpu6886;
 
 pub use axes::ImuAxesOrder;
-pub use imu::{AccScale, I2cInterface, Imu, ImuBus, ImuConfig, ImuReading, ImuState, SetupError};
+pub use imu::{
+    AccScale, I2cInterface, Imu, ImuBus, ImuConfig, ImuReading, ImuReadingf32, ImuReadingf64, ImuState, SetupError,
+};

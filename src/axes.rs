@@ -1,4 +1,4 @@
-use crate::ImuReading;
+use crate::ImuReadingf32;
 use vector_quaternion_matrix::Vector3df32;
 
 use cfg_if::cfg_if;
@@ -109,13 +109,13 @@ impl ImuAxesOrder {
             }
         }
     }
-    pub fn map_reading(self, data: &ImuReading) -> ImuReading {
+    pub fn map_reading(self, data: &ImuReadingf32) -> ImuReadingf32 {
         // use a feature flag to hardcode the mapping, so that the match statement can be bypassed for optimal performance.
         cfg_if! {
         if #[cfg(feature = "LIBRARY_SENSORS_IMU_FIXED_AXES_XPOS_YPOS_ZPOS")] {
             *data
         } else if #[cfg(feature = "LIBRARY_SENSORS_IMU_FIXED_AXES_YNEG_XPOS_ZPOS")] {
-            ImuReading {
+            ImuReadingf32 {
                 acc: Vector3df32 {
                     x: -data.acc.y,
                     y: data.acc.x,
@@ -139,7 +139,7 @@ impl ImuAxesOrder {
 
             match self {
                 ImuAxesOrder::XPOS_YPOS_ZPOS => *data,
-                ImuAxesOrder::YPOS_XNEG_ZPOS => ImuReading {
+                ImuAxesOrder::YPOS_XNEG_ZPOS => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.y,
                         y: -data.acc.x,
@@ -151,7 +151,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.z,
                     },
                 },
-                ImuAxesOrder::XNEG_YNEG_ZPOS => ImuReading {
+                ImuAxesOrder::XNEG_YNEG_ZPOS => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: -data.acc.x,
                         y: -data.acc.y,
@@ -163,7 +163,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.z,
                     },
                 },
-                ImuAxesOrder::YNEG_XPOS_ZPOS => ImuReading {
+                ImuAxesOrder::YNEG_XPOS_ZPOS => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: -data.acc.y,
                         y: data.acc.x,
@@ -175,7 +175,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.z,
                     },
                 },
-                ImuAxesOrder::XPOS_YNEG_ZNEG => ImuReading {
+                ImuAxesOrder::XPOS_YNEG_ZNEG => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.x,
                         y: -data.acc.y,
@@ -187,7 +187,7 @@ impl ImuAxesOrder {
                         z: -data.gyro_rps.z,
                     },
                 },
-                ImuAxesOrder::YPOS_XPOS_ZNEG => ImuReading {
+                ImuAxesOrder::YPOS_XPOS_ZNEG => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.y,
                         y: data.acc.x,
@@ -199,7 +199,7 @@ impl ImuAxesOrder {
                         z: -data.gyro_rps.z,
                     },
                 },
-                ImuAxesOrder::XNEG_YPOS_ZNEG => ImuReading {
+                ImuAxesOrder::XNEG_YPOS_ZNEG => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: -data.acc.x,
                         y: data.acc.y,
@@ -211,7 +211,7 @@ impl ImuAxesOrder {
                         z: -data.gyro_rps.z,
                     },
                 },
-                ImuAxesOrder::YNEG_XNEG_ZNEG => ImuReading {
+                ImuAxesOrder::YNEG_XNEG_ZNEG => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: -data.acc.y,
                         y: -data.acc.x,
@@ -223,7 +223,7 @@ impl ImuAxesOrder {
                         z: -data.gyro_rps.z,
                     },
                 },
-                ImuAxesOrder::ZPOS_YNEG_XPOS => ImuReading {
+                ImuAxesOrder::ZPOS_YNEG_XPOS => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.z,
                         y: -data.acc.y,
@@ -235,7 +235,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.x,
                     },
                 },
-                ImuAxesOrder::YPOS_ZPOS_XPOS => ImuReading {
+                ImuAxesOrder::YPOS_ZPOS_XPOS => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.y,
                         y: data.acc.z,
@@ -247,7 +247,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.x,
                     },
                 },
-                ImuAxesOrder::ZNEG_YPOS_XPOS => ImuReading {
+                ImuAxesOrder::ZNEG_YPOS_XPOS => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: -data.acc.z,
                         y: data.acc.y,
@@ -259,7 +259,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.x,
                     },
                 },
-                ImuAxesOrder::YNEG_ZNEG_XPOS => ImuReading {
+                ImuAxesOrder::YNEG_ZNEG_XPOS => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: -data.acc.y,
                         y: -data.acc.z,
@@ -271,7 +271,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.x,
                     },
                 },
-                ImuAxesOrder::ZPOS_YPOS_XNEG => ImuReading {
+                ImuAxesOrder::ZPOS_YPOS_XNEG => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.z,
                         y: data.acc.y,
@@ -283,7 +283,7 @@ impl ImuAxesOrder {
                         z: -data.gyro_rps.x,
                     },
                 },
-                ImuAxesOrder::YPOS_ZNEG_XNEG => ImuReading {
+                ImuAxesOrder::YPOS_ZNEG_XNEG => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.y,
                         y: -data.acc.z,
@@ -295,7 +295,7 @@ impl ImuAxesOrder {
                         z: -data.gyro_rps.x,
                     },
                 },
-                ImuAxesOrder::ZNEG_YNEG_XNEG => ImuReading {
+                ImuAxesOrder::ZNEG_YNEG_XNEG => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: -data.acc.z,
                         y: -data.acc.y,
@@ -307,7 +307,7 @@ impl ImuAxesOrder {
                         z: -data.gyro_rps.x,
                     },
                 },
-                ImuAxesOrder::YNEG_ZPOS_XNEG => ImuReading {
+                ImuAxesOrder::YNEG_ZPOS_XNEG => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: -data.acc.y,
                         y: data.acc.z,
@@ -319,7 +319,7 @@ impl ImuAxesOrder {
                         z: -data.gyro_rps.x,
                     },
                 },
-                ImuAxesOrder::ZPOS_XPOS_YPOS => ImuReading {
+                ImuAxesOrder::ZPOS_XPOS_YPOS => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.z,
                         y: data.acc.x,
@@ -331,7 +331,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.y,
                     },
                 },
-                ImuAxesOrder::XNEG_ZPOS_YPOS => ImuReading {
+                ImuAxesOrder::XNEG_ZPOS_YPOS => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: -data.acc.x,
                         y: data.acc.z,
@@ -343,7 +343,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.y,
                     },
                 },
-                ImuAxesOrder::ZNEG_XNEG_YPOS => ImuReading {
+                ImuAxesOrder::ZNEG_XNEG_YPOS => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: -data.acc.z,
                         y: -data.acc.x,
@@ -355,7 +355,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.y,
                     },
                 },
-                ImuAxesOrder::XPOS_ZNEG_YPOS => ImuReading {
+                ImuAxesOrder::XPOS_ZNEG_YPOS => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.x,
                         y: -data.acc.z,
@@ -367,7 +367,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.y,
                     },
                 },
-                ImuAxesOrder::ZPOS_XNEG_YNEG => ImuReading {
+                ImuAxesOrder::ZPOS_XNEG_YNEG => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.z,
                         y: -data.acc.x,
@@ -379,7 +379,7 @@ impl ImuAxesOrder {
                         z: -data.gyro_rps.y,
                     },
                 },
-                ImuAxesOrder::XNEG_ZNEG_YNEG => ImuReading {
+                ImuAxesOrder::XNEG_ZNEG_YNEG => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: -data.acc.x,
                         y: -data.acc.z,
@@ -391,7 +391,7 @@ impl ImuAxesOrder {
                         z: -data.gyro_rps.y,
                     },
                 },
-                ImuAxesOrder::ZNEG_XPOS_YNEG => ImuReading {
+                ImuAxesOrder::ZNEG_XPOS_YNEG => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: -data.acc.z,
                         y: data.acc.x,
@@ -403,7 +403,7 @@ impl ImuAxesOrder {
                         z: -data.gyro_rps.y,
                     },
                 },
-                ImuAxesOrder::XPOS_ZPOS_YNEG => ImuReading {
+                ImuAxesOrder::XPOS_ZPOS_YNEG => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.x,
                         y: data.acc.z,
@@ -415,7 +415,7 @@ impl ImuAxesOrder {
                         z: -data.gyro_rps.y,
                     },
                 },
-                ImuAxesOrder::XPOS_YPOS_ZPOS_45 => ImuReading {
+                ImuAxesOrder::XPOS_YPOS_ZPOS_45 => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.x * COS45F + data.acc.y * SIN45F,
                         y: -data.acc.x * SIN45F + data.acc.y * COS45F,
@@ -427,7 +427,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.z,
                     },
                 },
-                ImuAxesOrder::YPOS_XNEG_ZPOS_45 => ImuReading {
+                ImuAxesOrder::YPOS_XNEG_ZPOS_45 => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.x * COS135F + data.acc.y * SIN135F,
                         y: -data.acc.x * SIN135F + data.acc.y * COS135F,
@@ -439,7 +439,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.z,
                     },
                 },
-                ImuAxesOrder::XNEG_YNEG_ZPOS_45 => ImuReading {
+                ImuAxesOrder::XNEG_YNEG_ZPOS_45 => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.x * COS225F + data.acc.y * SIN225F,
                         y: -data.acc.x * SIN225F + data.acc.y * COS225F,
@@ -451,7 +451,7 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.z,
                     },
                 },
-                ImuAxesOrder::YNEG_XPOS_ZPOS_45 => ImuReading {
+                ImuAxesOrder::YNEG_XPOS_ZPOS_45 => ImuReadingf32 {
                     acc: Vector3df32 {
                         x: data.acc.x * COS315F + data.acc.y * SIN315F,
                         y: -data.acc.x * SIN315F + data.acc.y * COS315F,
@@ -502,7 +502,7 @@ mod tests {
 
     #[test]
     fn normal_types() {
-        is_normal::<ImuReading>();
+        is_normal::<ImuReadingf32>();
     }
     #[test]
     fn imu_state_default() {
