@@ -27,8 +27,8 @@ embedded-hal = "1.0.0"
 # imu-calib = "0.1.0"   
 
 # Core Embassy executor and concurrency primitives
-embassy-executor = { version = "0.9", features = ["executor-thread"] }
-embassy-sync = "0.7.2"
+embassy-executor = { version = "0.10.0", features = ["executor-thread"] }
+embassy-sync = "0.8.0"
 embassy-time = "0.5.0"
 
 # Hardware-specific Embassy HAL (example for Raspberry Pi RP2040)
@@ -50,7 +50,7 @@ log = "0.4"
 
 cfg-if = "1.0"   
 
-vector_quaternion_matrix = { git = "https://github.com/martinbudden/Crate-vector_quaternion_matrix" }
+vector-quaternion-matrix = { git = "https://github.com/martinbudden/Crate-vector_quaternion_matrix" }
 
 strum = "0.28.0"
 strum_macros = "0.28.0"
