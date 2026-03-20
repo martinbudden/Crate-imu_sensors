@@ -57,8 +57,8 @@ impl ImuState {
     pub const ACC_FULL_SCALE_32G: u8 = 6;
 }
 
-impl Default for ImuState {
-    fn default() -> Self {
+impl ImuState {
+    fn new() -> Self {
         const GYRO_2000DPS_RES: f32 = 2000.0 / 32768.0;
         const ACC_8G_RES: f32 = 8.0 / 32768.0;
         Self {
@@ -73,6 +73,12 @@ impl Default for ImuState {
     }
 }
 
+impl Default for ImuState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // Imu configuration, set on construction and read-only thereafter
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ImuConfig {
@@ -81,6 +87,18 @@ pub struct ImuConfig {
     pub device_id: u8, // 8-bit id assigned by IMU manufacturer
     pub axis_order: ImuAxesOrder,
     pub flags: u8, // Flags for describing IMU characteristics
+}
+
+impl Default for ImuConfig {
+    fn default() -> Self {
+        Self {
+            gyro_id_msp: 0,
+            acc_id_msp: 0,
+            device_id: 0, // 8-bit id assigned by IMU manufacturer
+            axis_order: ImuAxesOrder::XPOS_YPOS_ZPOS,
+            flags: 0, // Flags for describing IMU characteristics
+        }
+    }
 }
 
 impl ImuConfig {
@@ -105,7 +123,7 @@ impl ImuConfig {
     pub const MSP_GYRO_ID_VIRTUAL: u16 = 20;
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ImuReading {
     pub acc: Vector3df32,
     pub gyro_rps: Vector3df32,
