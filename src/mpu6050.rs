@@ -2,17 +2,15 @@
 
 use vector_quaternion_matrix::{Vector3df32, Vector3di16};
 
-use crate::{AccScale, I2cInterface, Imu, ImuAxesOrder, ImuBus, ImuConfig, ImuReading, ImuState, SetupError};
+use crate::{I2cInterface, Imu, ImuAxesOrder, ImuBus, ImuConfig, ImuReading, ImuState};
 
-use core::{future::Future, marker::PhantomData};
-use embedded_hal_async::{
-    delay::DelayNs,
-    i2c::{self, I2c},
-    spi::{self},
-};
+//use core::{future::Future, marker::PhantomData};
+use embedded_hal_async::i2c::{self, I2c};
+//use embedded_hal_async::{delay::DelayNs};
+//use embedded_hal_async::{spi::{self},};
 
 //use embedded_hal::blocking::i2c;
-use embedded_hal::i2c::Error;
+//use embedded_hal::i2c::Error;
 
 // IMU Registers and associated bitflags
 const REG_SAMPLE_RATE_DIVIDER: u8 = 0x19;
@@ -167,7 +165,7 @@ impl ImuState {
     // NOTE: Not sure if this is the right place to put this code, but it "wanted" to go here.
     // It just kept floating upward until it reached this point.
     // And it makes it easily accessible from test code.
-    fn map_mpu6050_acc(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+    pub fn map_mpu6050_acc(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let acc16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
             y: i16::from_be_bytes([buf[2], buf[3]]),
@@ -176,7 +174,7 @@ impl ImuState {
         let acc = Vector3df32::from(acc16) * self.acc_scale - self.acc_offset;
         ImuAxesOrder::map_vector(axis_order, &acc)
     }
-    fn map_mpu6050_gyro_rps(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+    pub fn map_mpu6050_gyro_rps(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let gyro16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
             y: i16::from_be_bytes([buf[2], buf[3]]),
@@ -185,7 +183,7 @@ impl ImuState {
         let gyro_rps = Vector3df32::from(gyro16) * self.gyro_scale_rps - self.gyro_offset;
         ImuAxesOrder::map_vector(axis_order, &gyro_rps)
     }
-    fn map_mpu6050_acc_gyro_rps(&mut self, buf: [u8; 14], axis_order: ImuAxesOrder) -> ImuReading {
+    pub fn map_mpu6050_acc_gyro_rps(&mut self, buf: [u8; 14], axis_order: ImuAxesOrder) -> ImuReading {
         let acc16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
             y: i16::from_be_bytes([buf[2], buf[3]]),
@@ -276,10 +274,10 @@ impl<B: ImuBus> Imu for Mpu6050<B> {
 
     //async fn read_acc(&mut self) -> impl core::future::Future<Output = Result<(),Self::Error> > {
     fn read_acc(&mut self) -> Vector3df32 {
-        let mut buf = [0u8; 6];
+        let buf = [0u8; 6];
         //self.bus().read_registers(Self::REG_ACCEL_XOUT_H, &mut buf).await;
-        let addr: u8 = 0x68;
-        let reg: u8 = REG_ACCEL_XOUT_H;
+        //let addr =  0x68;
+        //let reg =  REG_ACCEL_XOUT_H;
         //self.bus().blocking_write_read(addr, &[reg], &mut buf);
         //self.bus.blocking_write_read(addr, &[reg], data);
         self.state.map_mpu6050_acc(buf, self.config.axis_order)
@@ -287,14 +285,14 @@ impl<B: ImuBus> Imu for Mpu6050<B> {
 
     //async fn read_gyro_rps(&mut self) -> impl core::future::Future<Output = Result<(),Self::Error>> {
     fn read_gyro_rps(&mut self) -> Vector3df32 {
-        let mut buf = [0u8; 6];
+        let buf = [0u8; 6];
         //self.bus().read_registers(REG_GYRO_XOUT_H, &mut buf).await;
         self.state.map_mpu6050_gyro_rps(buf, self.config.axis_order)
     }
 
     //fn read_acc_gyro_rps(&mut self) -> impl core::future::Future<Output = Result<(),Self::Error>> {
     fn read_acc_gyro_rps(&mut self) -> ImuReading {
-        let mut buf = [0u8; 14];
+        let buf = [0u8; 14];
         //self.bus().read_registers(REG_ACCEL_XOUT_H, &mut buf).await;
         self.state.map_mpu6050_acc_gyro_rps(buf, self.config.axis_order)
     }
@@ -339,15 +337,13 @@ impl<I2C> Mpu6050<I2cInterface<I2C>> {
 impl<I2C: I2c> ImuBus for I2cInterface<I2C> {
     type Error = I2C::Error;
     async fn read_registers(&mut self, reg: u8, data: &mut [u8]) -> Result<(), Self::Error> {
-        let addr: u8 = 0x68;
+        let addr = 0x68;
         self.bus.write_read(addr, &[reg], data).await
     }
 
     async fn write_registers(&mut self, reg: u8, data: &[u8]) -> Result<(), Self::Error> {
-        let addr: u8 = 0x68;
-        self.bus
-            .transaction(addr, &mut [i2c::Operation::Write(&[reg]), i2c::Operation::Write(data)])
-            .await
+        let addr = 0x68;
+        self.bus.transaction(addr, &mut [i2c::Operation::Write(&[reg]), i2c::Operation::Write(data)]).await
     }
 }
 
@@ -380,6 +376,8 @@ mod tests {
         let (gyro_register_value, acc_register_value) =
             state.init_mpu6050(8000, ImuState::GYRO_FULL_SCALE_MAX, ImuState::ACC_FULL_SCALE_MAX);
 
+        assert_eq!(24, gyro_register_value);
+        assert_eq!(24, acc_register_value);
         // TODO: sit down and work out some useful test data for this
         let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
         let acc = state.map_mpu6050_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);

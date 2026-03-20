@@ -1,7 +1,5 @@
-#![allow(unused)]
-
 use crate::ImuAxesOrder;
-use vector_quaternion_matrix::{Vector3df32, Vector3di16};
+use vector_quaternion_matrix::Vector3df32;
 
 // Wrapper for I2C
 pub struct I2cInterface<B> {
@@ -10,6 +8,7 @@ pub struct I2cInterface<B> {
 }
 
 // Wrapper for SPI
+#[allow(unused)]
 pub struct SpiInterface<B, CS> {
     pub bus: B,
     pub cs: CS,
@@ -160,5 +159,19 @@ pub trait Imu {
     }
     fn set_acc_offset(&mut self, acc_offset: Vector3df32) {
         self.state_mut().acc_offset = acc_offset;
+    }
+    fn gyro_offset_mapped(&self) -> Vector3df32 {
+        self.config().axis_order.map_vector(&self.state().gyro_offset)
+    }
+    fn set_gyro_offset_mapped(&mut self, gyro_offset: Vector3df32) {
+        let gyro_offset_mapped = self.config().axis_order.axes_order_inverse().map_vector(&gyro_offset);
+        self.set_gyro_offset(gyro_offset_mapped);
+    }
+    fn acc_offset_mapped(&self) -> Vector3df32 {
+        self.config().axis_order.map_vector(&self.state().acc_offset)
+    }
+    fn set_acc_offset_mapped(&mut self, acc_offset: Vector3df32) {
+        let acc_offset_mapped = self.config().axis_order.axes_order_inverse().map_vector(&acc_offset);
+        self.set_gyro_offset(acc_offset_mapped);
     }
 }

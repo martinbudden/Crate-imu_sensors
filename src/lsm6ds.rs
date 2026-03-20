@@ -257,7 +257,7 @@ impl ImuState {
         }
         (gyro_register_value, acc_register_value)
     }
-    fn map_lsm6ds_acc(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+    pub fn map_lsm6ds_acc(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let acc16 = Vector3di16 {
             x: i16::from_le_bytes([buf[0], buf[1]]),
             y: i16::from_le_bytes([buf[2], buf[3]]),
@@ -266,7 +266,7 @@ impl ImuState {
         let acc = Vector3df32::from(acc16) * self.acc_scale - self.acc_offset;
         ImuAxesOrder::map_vector(axis_order, &acc)
     }
-    fn map_lsm6ds_gyro_rps(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+    pub fn map_lsm6ds_gyro_rps(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let gyro16 = Vector3di16 {
             x: i16::from_le_bytes([buf[0], buf[1]]),
             y: i16::from_le_bytes([buf[2], buf[3]]),
@@ -275,7 +275,7 @@ impl ImuState {
         let gyro_rps = Vector3df32::from(gyro16) * self.gyro_scale_rps - self.gyro_offset;
         ImuAxesOrder::map_vector(axis_order, &gyro_rps)
     }
-    fn map_lsm6ds_acc_gyro_rps(&mut self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReading {
+    pub fn map_lsm6ds_acc_gyro_rps(&mut self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReading {
         let gyro16 = Vector3di16 {
             x: i16::from_le_bytes([buf[0], buf[1]]),
             y: i16::from_le_bytes([buf[2], buf[3]]),
@@ -349,6 +349,8 @@ mod tests {
         let (gyro_register_value, acc_register_value) =
             state.init_mpu6050(8000, ImuState::GYRO_FULL_SCALE_MAX, ImuState::ACC_FULL_SCALE_MAX);
 
+        assert_eq!(24, gyro_register_value);
+        assert_eq!(24, acc_register_value);
         // TODO: sit down and work out some useful test data for this
         let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
         let acc = state.map_lsm6ds_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);

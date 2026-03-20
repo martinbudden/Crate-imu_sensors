@@ -1,10 +1,7 @@
-#![allow(unused)]
-
-use crate::{ImuReading, ImuState};
+use crate::ImuReading;
 use vector_quaternion_matrix::Vector3df32;
 
 use cfg_if::cfg_if;
-use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
 #[allow(non_camel_case_types)]
@@ -57,126 +54,32 @@ impl ImuAxesOrder {
 
         match self {
             ImuAxesOrder::XPOS_YPOS_ZPOS => *data,
-            ImuAxesOrder::YPOS_XNEG_ZPOS => Vector3df32 {
-                x: data.y,
-                y: -data.x,
-                z: data.z,
-            },
-            ImuAxesOrder::XNEG_YNEG_ZPOS => Vector3df32 {
-                x: -data.x,
-                y: -data.y,
-                z: data.z,
-            },
-            ImuAxesOrder::YNEG_XPOS_ZPOS => Vector3df32 {
-                x: -data.y,
-                y: data.x,
-                z: data.z,
-            },
-            ImuAxesOrder::XPOS_YNEG_ZNEG => Vector3df32 {
-                x: data.x,
-                y: -data.y,
-                z: -data.z,
-            },
-            ImuAxesOrder::YPOS_XPOS_ZNEG => Vector3df32 {
-                x: data.y,
-                y: data.x,
-                z: -data.z,
-            },
-            ImuAxesOrder::XNEG_YPOS_ZNEG => Vector3df32 {
-                x: -data.x,
-                y: data.y,
-                z: -data.z,
-            },
-            ImuAxesOrder::YNEG_XNEG_ZNEG => Vector3df32 {
-                x: -data.y,
-                y: -data.x,
-                z: -data.z,
-            },
-            ImuAxesOrder::ZPOS_YNEG_XPOS => Vector3df32 {
-                x: data.z,
-                y: -data.y,
-                z: data.x,
-            },
-            ImuAxesOrder::YPOS_ZPOS_XPOS => Vector3df32 {
-                x: data.y,
-                y: data.z,
-                z: data.x,
-            },
-            ImuAxesOrder::ZNEG_YPOS_XPOS => Vector3df32 {
-                x: -data.z,
-                y: data.y,
-                z: data.x,
-            },
-            ImuAxesOrder::YNEG_ZNEG_XPOS => Vector3df32 {
-                x: -data.y,
-                y: -data.z,
-                z: data.x,
-            },
-            ImuAxesOrder::ZPOS_YPOS_XNEG => Vector3df32 {
-                x: data.z,
-                y: data.y,
-                z: -data.x,
-            },
-            ImuAxesOrder::YPOS_ZNEG_XNEG => Vector3df32 {
-                x: data.y,
-                y: -data.z,
-                z: -data.x,
-            },
-            ImuAxesOrder::ZNEG_YNEG_XNEG => Vector3df32 {
-                x: -data.z,
-                y: -data.y,
-                z: -data.x,
-            },
-            ImuAxesOrder::YNEG_ZPOS_XNEG => Vector3df32 {
-                x: -data.y,
-                y: data.z,
-                z: -data.x,
-            },
-            ImuAxesOrder::ZPOS_XPOS_YPOS => Vector3df32 {
-                x: data.z,
-                y: data.x,
-                z: data.y,
-            },
-            ImuAxesOrder::XNEG_ZPOS_YPOS => Vector3df32 {
-                x: -data.x,
-                y: data.z,
-                z: data.y,
-            },
-            ImuAxesOrder::ZNEG_XNEG_YPOS => Vector3df32 {
-                x: -data.z,
-                y: -data.x,
-                z: data.y,
-            },
-            ImuAxesOrder::XPOS_ZNEG_YPOS => Vector3df32 {
-                x: data.x,
-                y: -data.z,
-                z: data.y,
-            },
-            ImuAxesOrder::ZPOS_XNEG_YNEG => Vector3df32 {
-                x: data.z,
-                y: -data.x,
-                z: -data.y,
-            },
-            ImuAxesOrder::XNEG_ZNEG_YNEG => Vector3df32 {
-                x: -data.x,
-                y: -data.z,
-                z: -data.y,
-            },
-            ImuAxesOrder::ZNEG_XPOS_YNEG => Vector3df32 {
-                x: -data.z,
-                y: data.x,
-                z: -data.y,
-            },
-            ImuAxesOrder::XPOS_ZPOS_YNEG => Vector3df32 {
-                x: data.x,
-                y: data.z,
-                z: -data.y,
-            },
-            ImuAxesOrder::XPOS_YPOS_ZPOS_45 => Vector3df32 {
-                x: data.x * COS45F + data.y * SIN45F,
-                y: -data.x * SIN45F + data.y * COS45F,
-                z: data.z,
-            },
+            ImuAxesOrder::YPOS_XNEG_ZPOS => Vector3df32 { x: data.y, y: -data.x, z: data.z },
+            ImuAxesOrder::XNEG_YNEG_ZPOS => Vector3df32 { x: -data.x, y: -data.y, z: data.z },
+            ImuAxesOrder::YNEG_XPOS_ZPOS => Vector3df32 { x: -data.y, y: data.x, z: data.z },
+            ImuAxesOrder::XPOS_YNEG_ZNEG => Vector3df32 { x: data.x, y: -data.y, z: -data.z },
+            ImuAxesOrder::YPOS_XPOS_ZNEG => Vector3df32 { x: data.y, y: data.x, z: -data.z },
+            ImuAxesOrder::XNEG_YPOS_ZNEG => Vector3df32 { x: -data.x, y: data.y, z: -data.z },
+            ImuAxesOrder::YNEG_XNEG_ZNEG => Vector3df32 { x: -data.y, y: -data.x, z: -data.z },
+            ImuAxesOrder::ZPOS_YNEG_XPOS => Vector3df32 { x: data.z, y: -data.y, z: data.x },
+            ImuAxesOrder::YPOS_ZPOS_XPOS => Vector3df32 { x: data.y, y: data.z, z: data.x },
+            ImuAxesOrder::ZNEG_YPOS_XPOS => Vector3df32 { x: -data.z, y: data.y, z: data.x },
+            ImuAxesOrder::YNEG_ZNEG_XPOS => Vector3df32 { x: -data.y, y: -data.z, z: data.x },
+            ImuAxesOrder::ZPOS_YPOS_XNEG => Vector3df32 { x: data.z, y: data.y, z: -data.x },
+            ImuAxesOrder::YPOS_ZNEG_XNEG => Vector3df32 { x: data.y, y: -data.z, z: -data.x },
+            ImuAxesOrder::ZNEG_YNEG_XNEG => Vector3df32 { x: -data.z, y: -data.y, z: -data.x },
+            ImuAxesOrder::YNEG_ZPOS_XNEG => Vector3df32 { x: -data.y, y: data.z, z: -data.x },
+            ImuAxesOrder::ZPOS_XPOS_YPOS => Vector3df32 { x: data.z, y: data.x, z: data.y },
+            ImuAxesOrder::XNEG_ZPOS_YPOS => Vector3df32 { x: -data.x, y: data.z, z: data.y },
+            ImuAxesOrder::ZNEG_XNEG_YPOS => Vector3df32 { x: -data.z, y: -data.x, z: data.y },
+            ImuAxesOrder::XPOS_ZNEG_YPOS => Vector3df32 { x: data.x, y: -data.z, z: data.y },
+            ImuAxesOrder::ZPOS_XNEG_YNEG => Vector3df32 { x: data.z, y: -data.x, z: -data.y },
+            ImuAxesOrder::XNEG_ZNEG_YNEG => Vector3df32 { x: -data.x, y: -data.z, z: -data.y },
+            ImuAxesOrder::ZNEG_XPOS_YNEG => Vector3df32 { x: -data.z, y: data.x, z: -data.y },
+            ImuAxesOrder::XPOS_ZPOS_YNEG => Vector3df32 { x: data.x, y: data.z, z: -data.y },
+            ImuAxesOrder::XPOS_YPOS_ZPOS_45 => {
+                Vector3df32 { x: data.x * COS45F + data.y * SIN45F, y: -data.x * SIN45F + data.y * COS45F, z: data.z }
+            }
             ImuAxesOrder::YPOS_XNEG_ZPOS_45 => {
                 const SIN135F: f32 = SIN45F;
                 const COS135F: f32 = -COS45F;
@@ -204,7 +107,6 @@ impl ImuAxesOrder {
                     z: data.z,
                 }
             }
-            _ => *data,
         }
     }
     pub fn map_reading(self, data: &ImuReading) -> ImuReading {
@@ -561,7 +463,6 @@ impl ImuAxesOrder {
                         z: data.gyro_rps.z,
                     },
                 },
-                _ => *data,
             }
         }
         }
@@ -594,12 +495,14 @@ impl ImuAxesOrder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ImuState;
+    use strum::IntoEnumIterator;
 
     fn is_normal<T: Sized + Send + Sync + Unpin>() {}
 
     #[test]
     fn normal_types() {
-        //is_normal::<Vector3d<f32>>();
+        is_normal::<ImuReading>();
     }
     #[test]
     fn imu_state_default() {
@@ -613,14 +516,7 @@ mod tests {
         let output = ImuAxesOrder::map_vector(ImuAxesOrder::XPOS_YPOS_ZPOS, &INPUT);
         assert_eq!(Vector3df32 { x: 2.0, y: 3.0, z: 5.0 }, output);
         let output = ImuAxesOrder::map_vector(ImuAxesOrder::YPOS_XNEG_ZPOS, &INPUT);
-        assert_eq!(
-            Vector3df32 {
-                x: 3.0,
-                y: -2.0,
-                z: 5.0
-            },
-            output
-        );
+        assert_eq!(Vector3df32 { x: 3.0, y: -2.0, z: 5.0 }, output);
     }
     #[test]
     fn axes_order_inverse() {

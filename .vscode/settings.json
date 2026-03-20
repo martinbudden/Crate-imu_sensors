@@ -4,6 +4,8 @@
         "Budden",
         "calib",
         "CLKSEL",
+        "codegen",
+        "debuginfo",
         "defmt",
         "DHCX",
         "DLPF",
