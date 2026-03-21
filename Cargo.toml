@@ -48,7 +48,7 @@ embedded-hal-async = "1.0.0"
 
 log = "0.4"
 
-cfg-if = "1.0"   
+cfg-if = "1.0"
 
 vector-quaternion-matrix = { git = "https://github.com/martinbudden/Crate-vector_quaternion_matrix" }
 
