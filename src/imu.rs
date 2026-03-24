@@ -1,35 +1,9 @@
-use crate::ImuAxesOrder;
+use crate::{ImuAxesOrder, ImuBus};
 use vector_quaternion_matrix::{Vector3d, Vector3df32};
 
-// Wrapper for I2C
-pub struct I2cInterface<B> {
-    pub bus: B,
-    pub address: u8,
-}
-
-// Wrapper for SPI
-#[allow(unused)]
-pub struct SpiInterface<B, CS> {
-    pub bus: B,
-    pub cs: CS,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum SetupError<E> {
-    /// An error occurred with the I2C/SPI bus during setup
-    Bus(E),
-    /// An incorrect 'Who Am I' value was returned from the IMU
-    ImuWhoAmI(u8),
-}
-
-impl<E> From<E> for SetupError<E> {
-    fn from(error: E) -> Self {
-        SetupError::Bus(error)
-    }
-}
 // Shared data members
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ImuState {
+pub struct ImuCommon {
     pub acc_offset: Vector3df32,
     pub gyro_offset: Vector3df32,
     pub gyro_scale_rps: f32,
@@ -39,7 +13,7 @@ pub struct ImuState {
     pub acc_sample_rate_hz: u32,
 }
 
-impl ImuState {
+impl ImuCommon {
     pub const GYRO_FULL_SCALE_MAX: u8 = 0;
     pub const GYRO_FULL_SCALE_125_DPS: u8 = 1;
     pub const GYRO_FULL_SCALE_250_DPS: u8 = 2;
@@ -57,7 +31,7 @@ impl ImuState {
     pub const ACC_FULL_SCALE_32G: u8 = 6;
 }
 
-impl ImuState {
+impl ImuCommon {
     fn new() -> Self {
         const GYRO_2000DPS_RES: f32 = 2000.0 / 32768.0;
         const ACC_8G_RES: f32 = 8.0 / 32768.0;
@@ -73,7 +47,7 @@ impl ImuState {
     }
 }
 
-impl Default for ImuState {
+impl Default for ImuCommon {
     fn default() -> Self {
         Self::new()
     }
@@ -140,18 +114,6 @@ pub enum AccScale {
     Fs16g = 0x03,
 }
 
-pub trait ImuBus {
-    type Error;
-    //fn read_register(&mut self, reg: u8) -> impl core::future::Future<Output = Result<u8, Self::Error>>;
-    fn read_registers(
-        &mut self,
-        reg: u8,
-        data: &mut [u8],
-    ) -> impl core::future::Future<Output = Result<(), Self::Error>>;
-    //fn write_register(&mut self, reg: u8, data: u8) -> impl core::future::Future<Output = Result<u8, Self::Error>>;
-    fn write_registers(&mut self, reg: u8, data: &[u8]) -> impl core::future::Future<Output = Result<(), Self::Error>>;
-}
-
 // Imu trait uses Bus as an associated type.
 pub trait Imu {
     type Bus: ImuBus;
@@ -159,8 +121,8 @@ pub trait Imu {
     const TARGET_OUTPUT_DATA_RATE_MAX: u8 = 0;
 
     fn bus(&mut self) -> &mut Self::Bus;
-    fn state(&self) -> &ImuState;
-    fn state_mut(&mut self) -> &mut ImuState;
+    fn common(&self) -> &ImuCommon;
+    fn common_mut(&mut self) -> &mut ImuCommon;
     fn config(&self) -> &ImuConfig;
 
     // TODO: implement async versions of functions
@@ -170,26 +132,26 @@ pub trait Imu {
     fn read_acc_gyro_rps(&mut self) -> ImuReadingf32;
 
     fn gyro_offset(&self) -> Vector3df32 {
-        self.state().gyro_offset
+        self.common().gyro_offset
     }
     fn set_gyro_offset(&mut self, gyro_offset: Vector3df32) {
-        self.state_mut().gyro_offset = gyro_offset;
+        self.common_mut().gyro_offset = gyro_offset;
     }
     fn acc_offset(&self) -> Vector3df32 {
-        self.state().acc_offset
+        self.common().acc_offset
     }
     fn set_acc_offset(&mut self, acc_offset: Vector3df32) {
-        self.state_mut().acc_offset = acc_offset;
+        self.common_mut().acc_offset = acc_offset;
     }
     fn gyro_offset_mapped(&self) -> Vector3df32 {
-        self.config().axis_order.map_vector(&self.state().gyro_offset)
+        self.config().axis_order.map_vector(&self.common().gyro_offset)
     }
     fn set_gyro_offset_mapped(&mut self, gyro_offset: Vector3df32) {
         let gyro_offset_mapped = self.config().axis_order.axes_order_inverse().map_vector(&gyro_offset);
         self.set_gyro_offset(gyro_offset_mapped);
     }
     fn acc_offset_mapped(&self) -> Vector3df32 {
-        self.config().axis_order.map_vector(&self.state().acc_offset)
+        self.config().axis_order.map_vector(&self.common().acc_offset)
     }
     fn set_acc_offset_mapped(&mut self, acc_offset: Vector3df32) {
         let acc_offset_mapped = self.config().axis_order.axes_order_inverse().map_vector(&acc_offset);

@@ -5,12 +5,16 @@
 #![deny(unused_must_use)]
 
 mod axes;
+mod i2c;
 mod imu;
+mod imu_bus;
 mod lsm6ds;
 mod mpu6050;
 mod mpu6886;
+mod spi;
 
 pub use axes::ImuAxesOrder;
-pub use imu::{
-    AccScale, I2cInterface, Imu, ImuBus, ImuConfig, ImuReading, ImuReadingf32, ImuReadingf64, ImuState, SetupError,
-};
+pub use i2c::I2cInterface;
+pub use imu::{AccScale, Imu, ImuCommon, ImuConfig, ImuReading, ImuReadingf32, ImuReadingf64};
+pub use imu_bus::{ImuBus, MockImuBus, SetupError};
+pub use spi::SpiInterface;

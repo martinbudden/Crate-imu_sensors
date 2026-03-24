@@ -2,11 +2,11 @@
 
 use vector_quaternion_matrix::{Vector3df32, Vector3di16};
 
-use crate::{AccScale, I2cInterface, Imu, ImuAxesOrder, ImuBus, ImuConfig, ImuReadingf32, ImuState, SetupError};
+use crate::{ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
 
 use cfg_if::cfg_if;
 
-// IMU Registers and associated bitflags
+// **** IMU Registers and associated bitflags ****
 const REG_RESERVED_00: u8 = 0x00;
 const REG_FUNC_CFG_ACCESS: u8 = 0x01;
 const REG_RESERVED_03: u8 = 0x03;
@@ -133,14 +133,61 @@ const REG_OUTY_L_ACC: u8 = 0x2A;
 const REG_OUTY_H_ACC: u8 = 0x2B;
 const REG_OUTZ_L_ACC: u8 = 0x2C;
 const REG_OUTZ_H_ACC: u8 = 0x2D;
+// **** IMU Registers and associated bitflags ****
 
-impl ImuState {
-    pub fn init_lsm6ds(
+pub struct Lsm6ds<B: ImuBus> {
+    pub bus: B,
+    pub common: ImuCommon,
+    pub config: ImuConfig,
+}
+
+fn delay_ms(_delay: u32) {}
+
+impl<B: ImuBus> Lsm6ds<B> {
+    const DEVICE_ID: u8 = 0x68;
+
+    pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
+        Self {
+            bus,
+            common: ImuCommon::default(),
+            config: ImuConfig {
+                gyro_id_msp: ImuConfig::MSP_GYRO_ID_LSM6DS,
+                acc_id_msp: ImuConfig::MSP_ACC_ID_LSM6DS,
+                axis_order,
+                device_id: Self::DEVICE_ID,
+                flags: 0,
+            },
+        }
+    }
+
+    async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+        self.bus.read_register(reg).await
+    }
+
+    pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
         gyro_sensitivity: u8,
         acc_sensitivity: u8,
-    ) -> (u8, u8) {
+    ) -> Result<(u8, u8), B::Error> {
+        //if (chip_id != REG_WHO_AM_I_RESPONSE_LSM6DS3TR_C && chip_id != REG_WHO_AM_I_RESPONSE_ISM330DHCX && chip_id != REG_WHO_AM_I_RESPONSE_LSM6DSOX) {
+        // software reset
+        self.bus.write_register(REG_CTRL3_C, SW_RESET).await?;
+
+        // set data ready pulsed
+        self.bus.write_register(REG_DATA_READY_PULSE_CONFIG, DATA_READY_PULSED).await?;
+        delay_ms(1);
+
+        // Interrupt pins are by default forced to ground, so active high
+        self.bus.write_register(REG_INT1_CTRL, INT1_DRDY_G).await?; // Enable gyro data ready on INT1 pin
+        delay_ms(1);
+
+        self.bus.write_register(REG_INT2_CTRL, INT2_DRDY_G).await?; // Enable gyro data ready on INT2 pin
+        delay_ms(1);
+
+        self.bus.write_register(REG_CTRL3_C, BDU | IF_INC).await?; // Block Data Update and automatically increment registers when read via serial interface (I2C or SPI)
+        delay_ms(1);
+
         let gyro_odr = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 3332 {
             GYRO_ODR_6664_HZ
         } else if target_output_data_rate_hz > 1666 {
@@ -163,7 +210,7 @@ impl ImuState {
             GYRO_ODR_12P5_HZ
         };
 
-        self.gyro_sample_rate_hz = match gyro_odr {
+        self.common.gyro_sample_rate_hz = match gyro_odr {
             GYRO_ODR_6664_HZ => 6664,
             GYRO_ODR_3332_HZ => 3332,
             GYRO_ODR_1666_HZ => 1666,
@@ -178,28 +225,25 @@ impl ImuState {
 
         let gyro_register_value: u8;
         match gyro_sensitivity {
-            ImuState::GYRO_FULL_SCALE_125_DPS | ImuState::GYRO_FULL_SCALE_250_DPS => {
-                //self._bus.write_register(REG_CTRL2_G, GYRO_RANGE_125_DPS | gyro_odr).await;
+            ImuCommon::GYRO_FULL_SCALE_125_DPS | ImuCommon::GYRO_FULL_SCALE_250_DPS => {
+                self.common.gyro_scale_dps = 245.0 / 32768.0;
                 gyro_register_value = GYRO_RANGE_125_DPS | gyro_odr;
-                self.gyro_scale_dps = 245.0 / 32768.0;
             }
-            ImuState::GYRO_FULL_SCALE_500_DPS => {
-                //self._bus.write_register(REG_CTRL2_G, GYRO_RANGE_500_DPS | gyro_odr).await;
+            ImuCommon::GYRO_FULL_SCALE_500_DPS => {
+                self.common.gyro_scale_dps = 500.0 / 32768.0;
                 gyro_register_value = GYRO_RANGE_500_DPS | gyro_odr;
-                self.gyro_scale_dps = 500.0 / 32768.0;
             }
-            ImuState::GYRO_FULL_SCALE_1000_DPS => {
-                //self._bus.write_register(REG_CTRL2_G, GYRO_RANGE_1000_DPS | gyro_odr).await;
+            ImuCommon::GYRO_FULL_SCALE_1000_DPS => {
+                self.common.gyro_scale_dps = 1000.0 / 32768.0;
                 gyro_register_value = GYRO_RANGE_1000_DPS | gyro_odr;
-                self.gyro_scale_dps = 1000.0 / 32768.0;
             }
             _ => {
-                // default includes ImuState::GYRO_FULL_SCALE_2000_DPS
-                //self._bus.write_register(REG_CTRL2_G, GYRO_RANGE_2000_DPS | gyro_odr).await;
+                // default includes ImuCommon::GYRO_FULL_SCALE_2000_DPS
+                self.common.gyro_scale_dps = 2000.0 / 32768.0;
                 gyro_register_value = GYRO_RANGE_2000_DPS | gyro_odr;
-                self.gyro_scale_dps = 2000.0 / 32768.0;
             }
         }
+        self.bus.write_register(REG_CTRL2_G, gyro_register_value).await?;
 
         let acc_odr = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 3332 {
             ACC_ODR_6664_HZ
@@ -223,7 +267,7 @@ impl ImuState {
             ACC_ODR_12P5_HZ
         };
 
-        self.acc_sample_rate_hz = match acc_odr {
+        self.common.acc_sample_rate_hz = match acc_odr {
             ACC_ODR_6664_HZ => 6664,
             ACC_ODR_3332_HZ => 3332,
             ACC_ODR_1666_HZ => 1666,
@@ -237,123 +281,109 @@ impl ImuState {
         };
         let acc_register_value: u8;
         match acc_sensitivity {
-            ImuState::ACC_FULL_SCALE_2G => {
+            ImuCommon::ACC_FULL_SCALE_2G => {
+                self.common.acc_scale = 2.0 / 32768.0;
                 acc_register_value = ACC_RANGE_2G | acc_odr;
-                self.acc_scale = 2.0 / 32768.0;
             }
-            ImuState::ACC_FULL_SCALE_4G => {
+            ImuCommon::ACC_FULL_SCALE_4G => {
+                self.common.acc_scale = 4.0 / 32768.0;
                 acc_register_value = ACC_RANGE_4G | acc_odr;
-                self.acc_scale = 4.0 / 32768.0;
             }
-            ImuState::ACC_FULL_SCALE_8G => {
+            ImuCommon::ACC_FULL_SCALE_8G => {
+                self.common.acc_scale = 8.0 / 32768.0;
                 acc_register_value = ACC_RANGE_8G | acc_odr;
-                self.acc_scale = 8.0 / 32768.0;
             }
             _ => {
-                // default includes  ImuState::ACC_FULL_SCALE_16G
+                // default includes  ImuCommon::ACC_FULL_SCALE_16G
+                self.common.acc_scale = 16.0 / 32768.0;
                 acc_register_value = ACC_RANGE_16G | acc_odr;
-                self.acc_scale = 16.0 / 32768.0;
             }
         }
-        (gyro_register_value, acc_register_value)
+        Ok((gyro_register_value, acc_register_value))
     }
-    pub fn map_lsm6ds_acc(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+
+    pub fn map_acc(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let acc16 = Vector3di16 {
             x: i16::from_le_bytes([buf[0], buf[1]]),
             y: i16::from_le_bytes([buf[2], buf[3]]),
             z: i16::from_le_bytes([buf[4], buf[5]]),
         };
-        let acc = Vector3df32::from(acc16) * self.acc_scale - self.acc_offset;
+        let acc = Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset;
         ImuAxesOrder::map_vector(axis_order, &acc)
     }
-    pub fn map_lsm6ds_gyro_rps(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+
+    pub fn map_gyro_rps(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let gyro16 = Vector3di16 {
             x: i16::from_le_bytes([buf[0], buf[1]]),
             y: i16::from_le_bytes([buf[2], buf[3]]),
             z: i16::from_le_bytes([buf[4], buf[5]]),
         };
-        let gyro_rps = Vector3df32::from(gyro16) * self.gyro_scale_rps - self.gyro_offset;
+        let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset;
         ImuAxesOrder::map_vector(axis_order, &gyro_rps)
     }
-    pub fn map_lsm6ds_acc_gyro_rps(&mut self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReadingf32 {
-        let gyro16 = Vector3di16 {
-            x: i16::from_le_bytes([buf[0], buf[1]]),
-            y: i16::from_le_bytes([buf[2], buf[3]]),
-            z: i16::from_le_bytes([buf[4], buf[5]]),
-        };
+
+    pub fn map_acc_gyro_rps(&mut self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReadingf32 {
         let acc16 = Vector3di16 {
             x: i16::from_le_bytes([buf[6], buf[7]]),
             y: i16::from_le_bytes([buf[8], buf[9]]),
             z: i16::from_le_bytes([buf[10], buf[11]]),
         };
+        let gyro16 = Vector3di16 {
+            x: i16::from_le_bytes([buf[0], buf[1]]),
+            y: i16::from_le_bytes([buf[2], buf[3]]),
+            z: i16::from_le_bytes([buf[4], buf[5]]),
+        };
         let imu_reading = ImuReadingf32 {
-            acc: Vector3df32::from(acc16) * self.acc_scale - self.acc_offset,
-            gyro_rps: Vector3df32::from(gyro16) * self.gyro_scale_rps - self.gyro_offset,
+            acc: Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset,
+            gyro_rps: Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset,
         };
         ImuAxesOrder::map_reading(axis_order, &imu_reading)
-    }
-}
-
-pub struct Lsm6ds<B: ImuBus> {
-    pub bus: B,
-    pub state: ImuState,
-    pub config: ImuConfig,
-}
-
-//if (chip_id != REG_WHO_AM_I_RESPONSE_LSM6DS3TR_C && chip_id != REG_WHO_AM_I_RESPONSE_ISM330DHCX && chip_id != REG_WHO_AM_I_RESPONSE_LSM6DSOX) {
-
-impl<B: ImuBus> Lsm6ds<B> {
-    const DEVICE_ID: u8 = 0x68;
-
-    pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
-        Self {
-            bus,
-            state: ImuState::default(),
-            config: ImuConfig {
-                gyro_id_msp: ImuConfig::MSP_GYRO_ID_LSM6DS,
-                acc_id_msp: ImuConfig::MSP_ACC_ID_LSM6DS,
-                axis_order,
-                device_id: Self::DEVICE_ID,
-                flags: 0,
-            },
-        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{ImuAxesOrder, MockImuBus};
 
     fn is_normal<T: Sized + Send + Sync + Unpin>() {}
 
     #[test]
     fn normal_types() {
-        //is_normal::<Vector3d<f32>>();
+        is_normal::<Lsm6ds<MockImuBus>>();
     }
     #[test]
     fn imu_state_init_lsm6ds() {
-        let mut state: ImuState = ImuState::default();
-        let (gyro_register_value, acc_register_value) =
-            state.init_lsm6ds(8000, ImuState::GYRO_FULL_SCALE_MAX, ImuState::ACC_FULL_SCALE_MAX);
+        let mut imu_bus = MockImuBus::new();
+        assert_eq!(0, imu_bus.registers[REG_CTRL3_C as usize]);
+        imu_bus.registers[REG_CTRL3_C as usize] = 4;
+        let mut imu: Lsm6ds<MockImuBus> = Lsm6ds::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+
+        let result = pollster::block_on(imu.init(8000, ImuCommon::GYRO_FULL_SCALE_MAX, ImuCommon::ACC_FULL_SCALE_MAX));
+        let (gyro_register_value, acc_register_value) = result.unwrap();
 
         assert_eq!(172, gyro_register_value);
         assert_eq!(164, acc_register_value);
-        assert_eq!(2000.0 / 32768.0, state.gyro_scale_dps);
-        assert_eq!(16.0 / 32768.0, state.acc_scale);
-        assert_eq!(6664, state.gyro_sample_rate_hz);
-        assert_eq!(6664, state.acc_sample_rate_hz);
+
+        let reg = pollster::block_on(imu.read_register(REG_CTRL3_C));
+        assert_eq!(BDU | IF_INC, reg.unwrap());
+
+        let reg = pollster::block_on(imu.read_register(REG_DATA_READY_PULSE_CONFIG));
+        assert_eq!(DATA_READY_PULSED, reg.unwrap());
+
+        assert_eq!(2000.0 / 32768.0, imu.common.gyro_scale_dps);
+        assert_eq!(16.0 / 32768.0, imu.common.acc_scale);
+        assert_eq!(6664, imu.common.gyro_sample_rate_hz);
+        assert_eq!(6664, imu.common.acc_sample_rate_hz);
     }
     #[test]
-    fn map_lsm6ds_acc() {
-        let mut state: ImuState = ImuState::default();
-        let (gyro_register_value, acc_register_value) =
-            state.init_mpu6050(8000, ImuState::GYRO_FULL_SCALE_MAX, ImuState::ACC_FULL_SCALE_MAX);
+    fn map_acc() {
+        let mut imu_bus = MockImuBus::new();
 
-        assert_eq!(24, gyro_register_value);
-        assert_eq!(24, acc_register_value);
-        // TODO: sit down and work out some useful test data for this
+        let mut imu: Lsm6ds<MockImuBus> = Lsm6ds::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+
         let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
-        let acc = state.map_lsm6ds_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let acc = imu.map_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);
         assert_eq!(Vector3df32 { x: 0.0, y: 0.0, z: 0.0 }, acc);
     }
 }

@@ -495,7 +495,7 @@ impl ImuAxesOrder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ImuState;
+    use crate::ImuCommon;
     use strum::IntoEnumIterator;
 
     fn is_normal<T: Sized + Send + Sync + Unpin>() {}
@@ -506,7 +506,7 @@ mod tests {
     }
     #[test]
     fn imu_state_default() {
-        let state = ImuState::default();
+        let state = ImuCommon::default();
         let z: Vector3df32 = Vector3df32::default();
         assert_eq!(state.acc_offset, z);
     }

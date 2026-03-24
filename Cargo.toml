@@ -57,6 +57,7 @@ strum_macros = "0.28.0"
 
 [dev-dependencies]
 # assert_float_eq = "1.2.0" # used for test
+pollster = "0.4.0"
 
 # see https://doc.rust-lang.org/cargo/reference/profiles.html
 [profile.dev]

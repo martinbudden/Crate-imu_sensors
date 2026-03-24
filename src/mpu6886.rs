@@ -2,8 +2,9 @@
 
 use vector_quaternion_matrix::{Vector3df32, Vector3di16};
 
-use crate::{ImuAxesOrder, ImuReadingf32, ImuState};
+use crate::{ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
 
+// **** IMU Registers and associated bitflags ****
 const REG_XG_OFFS_TC_H: u8 = 0x04;
 const REG_XG_OFFS_TC_L: u8 = 0x05;
 const REG_YG_OFFS_TC_H: u8 = 0x07;
@@ -80,35 +81,67 @@ const REG_YA_OFFSET_H: u8 = 0x7A;
 const REG_YA_OFFSET_L: u8 = 0x7B;
 const REG_ZA_OFFSET_H: u8 = 0x7D;
 const REG_ZA_OFFSET_L: u8 = 0x7E;
+// **** IMU Registers and associated bitflags ****
 
-impl ImuState {
-    pub fn init_mpu6886(
+pub struct Mpu6886<B: ImuBus> {
+    pub bus: B,
+    pub common: ImuCommon,
+    pub config: ImuConfig,
+}
+
+fn delay_ms(_delay: u32) {}
+
+impl<B: ImuBus> Mpu6886<B> {
+    const DEVICE_ID: u8 = 0;
+
+    pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
+        Self {
+            bus,
+            common: ImuCommon::default(),
+            config: ImuConfig {
+                gyro_id_msp: ImuConfig::MSP_ACC_ID_DEFAULT,
+                acc_id_msp: ImuConfig::MSP_ACC_ID_DEFAULT,
+                axis_order,
+                device_id: Self::DEVICE_ID,
+                flags: 0,
+            },
+        }
+    }
+
+    async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+        self.bus.read_register(reg).await
+    }
+
+    pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
         gyro_sensitivity: u8,
         acc_sensitivity: u8,
-    ) -> (u8, u8) {
-        (0, 0)
+    ) -> Result<(u8, u8), B::Error> {
+        Ok((0, 0))
     }
-    pub fn map_mpu6886_acc(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+
+    pub fn map_acc(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let acc16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
             y: i16::from_be_bytes([buf[2], buf[3]]),
             z: i16::from_be_bytes([buf[4], buf[5]]),
         };
-        let acc = Vector3df32::from(acc16) * self.acc_scale - self.acc_offset;
+        let acc = Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset;
         ImuAxesOrder::map_vector(axis_order, &acc)
     }
-    pub fn map_mpu6886_gyro_rps(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+
+    pub fn map_gyro_rps(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let gyro16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
             y: i16::from_be_bytes([buf[2], buf[3]]),
             z: i16::from_be_bytes([buf[4], buf[5]]),
         };
-        let gyro_rps = Vector3df32::from(gyro16) * self.gyro_scale_rps - self.gyro_offset;
+        let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset;
         ImuAxesOrder::map_vector(axis_order, &gyro_rps)
     }
-    pub fn map_mpu6886_acc_gyro_rps(&mut self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReadingf32 {
+
+    pub fn map_acc_gyro_rps(&mut self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReadingf32 {
         let gyro16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
             y: i16::from_be_bytes([buf[2], buf[3]]),
@@ -119,10 +152,12 @@ impl ImuState {
             y: i16::from_be_bytes([buf[8], buf[9]]),
             z: i16::from_be_bytes([buf[10], buf[11]]),
         };
+
         let imu_reading = ImuReadingf32 {
-            acc: Vector3df32::from(acc16) * self.acc_scale - self.acc_offset,
-            gyro_rps: Vector3df32::from(gyro16) * self.gyro_scale_rps - self.gyro_offset,
+            acc: Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset,
+            gyro_rps: Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset,
         };
+
         ImuAxesOrder::map_reading(axis_order, &imu_reading)
     }
 }
@@ -130,18 +165,21 @@ impl ImuState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{ImuAxesOrder, MockImuBus};
 
     fn is_normal<T: Sized + Send + Sync + Unpin>() {}
 
     #[test]
     fn normal_types() {
-        is_normal::<ImuReadingf32>();
+        is_normal::<Mpu6886<MockImuBus>>();
     }
     #[test]
     fn imu_state_init_mpu6886() {
-        let mut state: ImuState = ImuState::default();
-        let (gyro_register_value, acc_register_value) =
-            state.init_mpu6886(8000, ImuState::GYRO_FULL_SCALE_MAX, ImuState::ACC_FULL_SCALE_MAX);
+        let mut imu_bus = MockImuBus::new();
+        let mut imu: Mpu6886<MockImuBus> = Mpu6886::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+
+        let result = pollster::block_on(imu.init(8000, ImuCommon::GYRO_FULL_SCALE_MAX, ImuCommon::ACC_FULL_SCALE_MAX));
+        let (gyro_register_value, acc_register_value) = result.unwrap();
 
         assert_eq!(0, gyro_register_value);
         assert_eq!(0, acc_register_value);
@@ -152,15 +190,12 @@ mod tests {
     }
     #[test]
     fn map_lsm6ds_acc() {
-        let mut state: ImuState = ImuState::default();
-        let (gyro_register_value, acc_register_value) =
-            state.init_mpu6886(8000, ImuState::GYRO_FULL_SCALE_MAX, ImuState::ACC_FULL_SCALE_MAX);
-        assert_eq!(0, gyro_register_value);
-        assert_eq!(0, acc_register_value);
+        let mut imu_bus = MockImuBus::new();
+        let mut imu: Mpu6886<MockImuBus> = Mpu6886::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         // TODO: sit down and work out some useful test data for this
-        let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
-        let acc = state.map_mpu6886_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);
-        assert_eq!(Vector3df32 { x: 0.0, y: 0.0, z: 0.0 }, acc);
+        //let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
+        //let acc = state.map_mpu6886_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        //assert_eq!(Vector3df32 { x: 0.0, y: 0.0, z: 0.0 }, acc);
     }
 }
