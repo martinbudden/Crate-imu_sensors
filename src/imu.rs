@@ -119,6 +119,8 @@ pub enum AccScale {
 // Imu trait uses Bus as an associated type.
 pub trait Imu {
     type Bus: ImuBus;
+    // This forces the IMU error to be the same as the Bus error
+    type Error: From<<Self::Bus as ImuBus>::Error>;
 
     const TARGET_OUTPUT_DATA_RATE_MAX: u8 = 0;
 
@@ -128,9 +130,12 @@ pub trait Imu {
     fn config(&self) -> &ImuConfig;
 
     // TODO: implement async versions of functions
-    //async fn read_acc(&mut self) -> impl core::future::Future<Output = Result<(), Self::Error>>;
+    #[allow(async_fn_in_trait)]
+    async fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error>;
+    #[allow(async_fn_in_trait)]
+    async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>;
     fn read_gyro_rps(&mut self) -> Vector3df32;
-    fn read_acc(&mut self) -> Vector3df32;
+    //fn read_acc(&mut self) -> Vector3df32;
     fn read_acc_gyro_rps(&mut self) -> ImuReadingf32;
 
     fn gyro_offset(&self) -> Vector3df32 {

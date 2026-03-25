@@ -7,9 +7,9 @@ use crate::{ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
 use cfg_if::cfg_if;
 
 // **** IMU Registers and associated bitflags ****
-const REG_RESERVED_00: u8 = 0x00;
-const REG_FUNC_CFG_ACCESS: u8 = 0x01;
-const REG_RESERVED_03: u8 = 0x03;
+const _REG_RESERVED_00: u8 = 0x00;
+const _REG_FUNC_CFG_ACCESS: u8 = 0x01;
+const _REG_RESERVED_03: u8 = 0x03;
 
 cfg_if! {
 if #[cfg(feature = "USE_IMU_LSMDS63TR_C")] {
@@ -60,11 +60,11 @@ const REG_INT1_CTRL: u8 = 0x0D;
 const INT1_DRDY_G: u8 = 0b00000010;
 const REG_INT2_CTRL: u8 = 0x0E;
 const INT2_DRDY_G: u8 = 0b00000010;
-const REG_WHO_AM_I: u8 = 0x0F;
-const REG_WHO_AM_I_RESPONSE_LSM6DS3TR_C: u8 = 0x6A;
-const REG_WHO_AM_I_RESPONSE_ISM330DHCX: u8 = 0x6B;
-const REG_WHO_AM_I_RESPONSE_LSM6DSOX: u8 = 0x6C;
-const REG_CTRL1_XL: u8 = 0x10;
+const _REG_WHO_AM_I: u8 = 0x0F;
+const _REG_WHO_AM_I_RESPONSE_LSM6DS3TR_C: u8 = 0x6A;
+const _REG_WHO_AM_I_RESPONSE_ISM330DHCX: u8 = 0x6B;
+const _REG_WHO_AM_I_RESPONSE_LSM6DSOX: u8 = 0x6C;
+const _REG_CTRL1_XL: u8 = 0x10;
 const ACC_RANGE_2G: u8 = 0b0000;
 const ACC_RANGE_4G: u8 = 0b1000;
 const ACC_RANGE_8G: u8 = 0b1100;
@@ -81,8 +81,8 @@ const ACC_ODR_3332_HZ: u8 = 0b10010000;
 const ACC_ODR_6664_HZ: u8 = 0b10100000;
 const REG_CTRL2_G: u8 = 0x11;
 const GYRO_RANGE_125_DPS: u8 = 0b0010;
-const GYRO_RANGE_245_DPS: u8 = 0b0000; // LSM6DS3TR_C
-const GYRO_RANGE_250_DPS: u8 = 0b0000; // ISM330DHCX, LSM6DSOX
+const _GYRO_RANGE_245_DPS: u8 = 0b0000; // LSM6DS3TR_C
+const _GYRO_RANGE_250_DPS: u8 = 0b0000; // ISM330DHCX, LSM6DSOX
 const GYRO_RANGE_500_DPS: u8 = 0b0100;
 const GYRO_RANGE_1000_DPS: u8 = 0b1000;
 const GYRO_RANGE_2000_DPS: u8 = 0b1100;
@@ -100,39 +100,39 @@ const REG_CTRL3_C: u8 = 0x12;
 const BDU: u8 = 0b01000000;
 const IF_INC: u8 = 0b00000100;
 const SW_RESET: u8 = 0b00000001;
-const REG_CTRL4_C: u8 = 0x13;
-const I2C_DISABLE: u8 = 0b00000100;
-const LPF1_SEL_G: u8 = 0b00000010;
-const REG_CTRL5_C: u8 = 0x14;
-const REG_CTRL6_C: u8 = 0x15;
-const XL_HM_MODE_DISABLE: u8 = 0b00010000;
-const LPF1_MEDIUM_HI: u8 = 0x00;
-const LPF1_MEDIUM_LO: u8 = 0x01;
-const LPF1_LO: u8 = 0x02;
-const LPF1_HI: u8 = 0x03;
-const REG_CTRL7_G: u8 = 0x16;
-const REG_CTRL8_XL: u8 = 0x17;
-const REG_CTRL9_XL: u8 = 0x18;
-const REG_CTRL10_C: u8 = 0x19;
-const REG_WAKE_UP_SRC: u8 = 0x1B;
-const REG_TAP_SRC: u8 = 0x1C;
-const REG_D6D_SRC: u8 = 0x1D;
-const REG_STATUS_REG: u8 = 0x1E;
-const REG_RESERVED_1F: u8 = 0x1F;
-const REG_OUT_TEMP_L: u8 = 0x20;
-const REG_OUT_TEMP_H: u8 = 0x22;
-const REG_OUTX_L_G: u8 = 0x22;
-const REG_OUTX_H_G: u8 = 0x23;
-const REG_OUTY_L_G: u8 = 0x24;
-const REG_OUTY_H_G: u8 = 0x25;
-const REG_OUTZ_L_G: u8 = 0x26;
-const REG_OUTZ_H_G: u8 = 0x27;
-const REG_OUTX_L_ACC: u8 = 0x28;
-const REG_OUTX_H_ACC: u8 = 0x29;
-const REG_OUTY_L_ACC: u8 = 0x2A;
-const REG_OUTY_H_ACC: u8 = 0x2B;
-const REG_OUTZ_L_ACC: u8 = 0x2C;
-const REG_OUTZ_H_ACC: u8 = 0x2D;
+const _REG_CTRL4_C: u8 = 0x13;
+const _I2C_DISABLE: u8 = 0b00000100;
+const _LPF1_SEL_G: u8 = 0b00000010;
+const _REG_CTRL5_C: u8 = 0x14;
+const _REG_CTRL6_C: u8 = 0x15;
+const _XL_HM_MODE_DISABLE: u8 = 0b00010000;
+const _LPF1_MEDIUM_HI: u8 = 0x00;
+const _LPF1_MEDIUM_LO: u8 = 0x01;
+const _LPF1_LO: u8 = 0x02;
+const _LPF1_HI: u8 = 0x03;
+const _REG_CTRL7_G: u8 = 0x16;
+const _REG_CTRL8_XL: u8 = 0x17;
+const _REG_CTRL9_XL: u8 = 0x18;
+const _REG_CTRL10_C: u8 = 0x19;
+const _REG_WAKE_UP_SRC: u8 = 0x1B;
+const _REG_TAP_SRC: u8 = 0x1C;
+const _REG_D6D_SRC: u8 = 0x1D;
+const _REG_STATUS_REG: u8 = 0x1E;
+const _REG_RESERVED_1F: u8 = 0x1F;
+const _REG_OUT_TEMP_L: u8 = 0x20;
+const _REG_OUT_TEMP_H: u8 = 0x22;
+const _REG_OUTX_L_G: u8 = 0x22;
+const _REG_OUTX_H_G: u8 = 0x23;
+const _REG_OUTY_L_G: u8 = 0x24;
+const _REG_OUTY_H_G: u8 = 0x25;
+const _REG_OUTZ_L_G: u8 = 0x26;
+const _REG_OUTZ_H_G: u8 = 0x27;
+const _REG_OUTX_L_ACC: u8 = 0x28;
+const _REG_OUTX_H_ACC: u8 = 0x29;
+const _REG_OUTY_L_ACC: u8 = 0x2A;
+const _REG_OUTY_H_ACC: u8 = 0x2B;
+const _REG_OUTZ_L_ACC: u8 = 0x2C;
+const _REG_OUTZ_H_ACC: u8 = 0x2D;
 // **** IMU Registers and associated bitflags ****
 
 pub struct Lsm6ds<B: ImuBus> {
@@ -378,7 +378,7 @@ mod tests {
     }
     #[test]
     fn map_acc() {
-        let mut imu_bus = MockImuBus::new();
+        let imu_bus = MockImuBus::new();
 
         let mut imu: Lsm6ds<MockImuBus> = Lsm6ds::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 

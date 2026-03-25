@@ -4,8 +4,6 @@ use vector_quaternion_matrix::{Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
 
-// use embedded_hal_async::i2c;
-
 // **** IMU Registers and associated bitflags ****
 const _REG_SAMPLE_RATE_DIVIDER: u8 = 0x19;
 const _REG_CONFIG: u8 = 0x1A;
@@ -83,12 +81,62 @@ const _REG_WHO_AM_I: u8 = 0x75;
 
 /// MPU6000 is SPI variant of MPU6050
 /// MPU6000 and MPU6050 are Big Endian
+///
 pub struct Mpu6050<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,
     pub config: ImuConfig,
 }
 
+impl<B: ImuBus> Imu for Mpu6050<B> {
+    type Bus = B;
+    type Error = <B as ImuBus>::Error;
+
+    async fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
+        // On the Pico, I2C write_read is natively async.
+        // We just delegate the call and .await the result.
+        self.bus.bus_write_read(address, write, read).await
+    }
+
+    async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 6];
+        self.write_read(0x68, &[0x3B], &mut buf).await?;
+        let ret: Vector3df32 = self.map_gyro_rps(buf, self.config.axis_order);
+        Ok(ret)
+    }
+    //async fn read_gyro_rps(&mut self) -> impl core::future::Future<Output = Result<(),Self::Error>> {
+    fn read_gyro_rps(&mut self) -> Vector3df32 {
+        let buf = [0u8; 6];
+        //self.bus().read_registers(REG_GYRO_XOUT_H, &mut buf).await;
+        self.map_gyro_rps(buf, self.config.axis_order)
+    }
+
+    //fn read_acc_gyro_rps(&mut self) -> impl core::future::Future<Output = Result<(),Self::Error>> {
+    fn read_acc_gyro_rps(&mut self) -> ImuReadingf32 {
+        let buf = [0u8; 14];
+        //self.bus().read_registers(REG_ACCEL_XOUT_H, &mut buf).await;
+        self.map_acc_gyro_rps(buf, self.config.axis_order)
+    }
+
+    fn bus(&mut self) -> &mut Self::Bus {
+        &mut self.bus
+    }
+
+    fn common(&self) -> &ImuCommon {
+        &self.common
+    }
+
+    fn common_mut(&mut self) -> &mut ImuCommon {
+        &mut self.common
+    }
+
+    fn config(&self) -> &ImuConfig {
+        &self.config
+    }
+}
 fn delay_ms(_delay: u32) {}
 
 impl<B: ImuBus> Mpu6050<B> {
@@ -256,52 +304,6 @@ impl<B: ImuBus> Mpu6050<B> {
     pub fn set_acc_scale(&mut self, scale: AccScale) {
         self.common.bus.write_register(Self::REG_ACCEL_CONFIG, scale as u8).ok();
     }*/
-}
-
-impl<B: ImuBus> Imu for Mpu6050<B> {
-    type Bus = B;
-    //type Error = I2C::Error;
-
-    fn bus(&mut self) -> &mut Self::Bus {
-        &mut self.bus
-    }
-
-    fn common(&self) -> &ImuCommon {
-        &self.common
-    }
-
-    fn common_mut(&mut self) -> &mut ImuCommon {
-        &mut self.common
-    }
-
-    fn config(&self) -> &ImuConfig {
-        &self.config
-    }
-
-    //async fn read_acc(&mut self) -> impl core::future::Future<Output = Result<(),Self::Error> > {
-    fn read_acc(&mut self) -> Vector3df32 {
-        let buf = [0u8; 6];
-        //self.bus().read_registers(Self::REG_ACCEL_XOUT_H, &mut buf).await;
-        //let addr =  0x68;
-        //let reg =  REG_ACCEL_XOUT_H;
-        //self.bus().blocking_write_read(addr, &[reg], &mut buf);
-        //self.bus.blocking_write_read(addr, &[reg], data);
-        self.map_acc(buf, self.config.axis_order)
-    }
-
-    //async fn read_gyro_rps(&mut self) -> impl core::future::Future<Output = Result<(),Self::Error>> {
-    fn read_gyro_rps(&mut self) -> Vector3df32 {
-        let buf = [0u8; 6];
-        //self.bus().read_registers(REG_GYRO_XOUT_H, &mut buf).await;
-        self.map_gyro_rps(buf, self.config.axis_order)
-    }
-
-    //fn read_acc_gyro_rps(&mut self) -> impl core::future::Future<Output = Result<(),Self::Error>> {
-    fn read_acc_gyro_rps(&mut self) -> ImuReadingf32 {
-        let buf = [0u8; 14];
-        //self.bus().read_registers(REG_ACCEL_XOUT_H, &mut buf).await;
-        self.map_acc_gyro_rps(buf, self.config.axis_order)
-    }
 }
 
 /*

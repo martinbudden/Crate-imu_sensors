@@ -256,7 +256,7 @@ mod tests {
     #[test]
     fn map_acc() {
         let imu_bus = MockImuBus::new();
-        let imu: Mpu6886<MockImuBus> = Mpu6886::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let mut imu: Mpu6886<MockImuBus> = Mpu6886::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         // TODO: sit down and work out some useful test data for this
         let data: [u8; 6] = [0, 0, 0, 0, 0, 0];

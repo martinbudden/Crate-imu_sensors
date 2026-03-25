@@ -4,6 +4,9 @@
 #![deny(clippy::panic)]
 #![deny(unused_must_use)]
 
+#[cfg(all(feature = "i2c", feature = "spi"))]
+compile_error!("Features 'i2c' and 'spi' are mutually exclusive and cannot be enabled together.");
+
 mod axes;
 mod i2c;
 mod imu;
