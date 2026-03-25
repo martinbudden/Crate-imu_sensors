@@ -17,4 +17,7 @@ pub use axes::ImuAxesOrder;
 pub use i2c::I2cInterface;
 pub use imu::{AccScale, Imu, ImuCommon, ImuConfig, ImuReading, ImuReadingf32, ImuReadingf64};
 pub use imu_bus::{ImuBus, MockImuBus, SetupError};
+pub use lsm6ds::Lsm6ds;
+pub use mpu6050::Mpu6050;
+pub use mpu6886::Mpu6886;
 pub use spi::SpiInterface;

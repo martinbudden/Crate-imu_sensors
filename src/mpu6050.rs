@@ -1,84 +1,84 @@
-#![allow(unused)]
+//#![allow(unused)]
 
 use vector_quaternion_matrix::{Vector3df32, Vector3di16};
 
-use crate::{I2cInterface, Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32, MockImuBus};
+use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
 
-use embedded_hal_async::i2c::{self, I2c};
+// use embedded_hal_async::i2c;
 
 // **** IMU Registers and associated bitflags ****
-const REG_SAMPLE_RATE_DIVIDER: u8 = 0x19;
-const REG_CONFIG: u8 = 0x1A;
-const DLPF_CFG_260_HZ: u8 = 0b00000000; // FS = 8kHz only
-const DLPF_CFG_184_HZ: u8 = 0b00000001;
-const DLPF_CFG_94_HZ: u8 = 0b00000010;
-const DLPF_CFG_44_HZ: u8 = 0b00000011;
-const DLPF_CFG_21_HZ: u8 = 0b00000100;
-const DLPF_CFG_10_HZ: u8 = 0b00000101;
-const DLPF_CFG_5_HZ: u8 = 0b00000110;
+const _REG_SAMPLE_RATE_DIVIDER: u8 = 0x19;
+const _REG_CONFIG: u8 = 0x1A;
+const _DLPF_CFG_260_HZ: u8 = 0b00000000; // FS = 8kHz only
+const _DLPF_CFG_184_HZ: u8 = 0b00000001;
+const _DLPF_CFG_94_HZ: u8 = 0b00000010;
+const _DLPF_CFG_44_HZ: u8 = 0b00000011;
+const _DLPF_CFG_21_HZ: u8 = 0b00000100;
+const _DLPF_CFG_10_HZ: u8 = 0b00000101;
+const _DLPF_CFG_5_HZ: u8 = 0b00000110;
 
-const REG_GYRO_CONFIG: u8 = 0x1B;
+const _REG_GYRO_CONFIG: u8 = 0x1B;
 const GYRO_RANGE_250_DPS: u8 = 0b00000000;
 const GYRO_RANGE_500_DPS: u8 = 0b00001000;
 const GYRO_RANGE_1000_DPS: u8 = 0b00010000;
 const GYRO_RANGE_2000_DPS: u8 = 0b00011000;
 
-const REG_ACCEL_CONFIG: u8 = 0x1C;
+const _REG_ACCEL_CONFIG: u8 = 0x1C;
 const ACCEL_RANGE_2G: u8 = 0b0000_0000;
 const ACCEL_RANGE_4G: u8 = 0b0000_1000;
 const ACCEL_RANGE_8G: u8 = 0b0001_0000;
 const ACCEL_RANGE_16G: u8 = 0b0001_1000;
 
 const REG_INT_PIN_CONFIG: u8 = 0x37;
-const INT_LEVEL_ACTIVE_LOW: u8 = 0b10000000;
+const _INT_LEVEL_ACTIVE_LOW: u8 = 0b10000000;
 const INT_LEVEL_ACTIVE_HIGH: u8 = 0;
-const INT_OPEN_DRAIN: u8 = 0b01000000;
+const _INT_OPEN_DRAIN: u8 = 0b01000000;
 const INT_PUSH_PULL: u8 = 0;
-const INT_ENABLE_LATCHED: u8 = 0b00100000;
+const _INT_ENABLE_LATCHED: u8 = 0b00100000;
 const INT_ENABLE_PULSE: u8 = 0;
 const INT_CLEAR_READ_ANY: u8 = 0b00010000; // cleared on any read
-const INT_CLEAR_READ_STATUS: u8 = 0; // cleared only by reading REG_INT_STATUS
-const FSYNCH_ACTIVE_LOW: u8 = 0b00001000; // interrupt on FSYNCH pin active high
-const FSYNCH_ACTIVE_HIGH: u8 = 0;
-const FSYNCH_INT_ENABLE: u8 = 0b00000100; // enable interrupt on FSYNCH pin
+const _INT_CLEAR_READ_STATUS: u8 = 0; // cleared only by reading REG_INT_STATUS
+const _FSYNCH_ACTIVE_LOW: u8 = 0b00001000; // interrupt on FSYNCH pin active high
+const _FSYNCH_ACTIVE_HIGH: u8 = 0;
+const _FSYNCH_INT_ENABLE: u8 = 0b00000100; // enable interrupt on FSYNCH pin
 const FSYNCH_INT_DISABLE: u8 = 0;
 
 const REG_INT_ENABLE: u8 = 0x38;
 const DATA_READY_ENABLE: u8 = 0b00000001;
 
-const REG_INT_STATUS: u8 = 0x3A;
+const _REG_INT_STATUS: u8 = 0x3A;
 
-const REG_ACCEL_XOUT_H: u8 = 0x3B;
-const REG_ACCEL_XOUT_L: u8 = 0x3C;
-const REG_ACCEL_YOUT_H: u8 = 0x3D;
-const REG_ACCEL_YOUT_L: u8 = 0x3E;
-const REG_ACCEL_ZOUT_H: u8 = 0x3F;
-const REG_ACCEL_ZOUT_L: u8 = 0x40;
+const _REG_ACCEL_XOUT_H: u8 = 0x3B;
+const _REG_ACCEL_XOUT_L: u8 = 0x3C;
+const _REG_ACCEL_YOUT_H: u8 = 0x3D;
+const _REG_ACCEL_YOUT_L: u8 = 0x3E;
+const _REG_ACCEL_ZOUT_H: u8 = 0x3F;
+const _REG_ACCEL_ZOUT_L: u8 = 0x40;
 
-const REG_TEMP_OUT_H: u8 = 0x41;
-const REG_TEMP_OUT_L: u8 = 0x42;
+const _REG_TEMP_OUT_H: u8 = 0x41;
+const _REG_TEMP_OUT_L: u8 = 0x42;
 
-const REG_GYRO_XOUT_H: u8 = 0x43;
-const REG_GYRO_XOUT_L: u8 = 0x44;
-const REG_GYRO_YOUT_H: u8 = 0x45;
-const REG_GYRO_YOUT_L: u8 = 0x46;
-const REG_GYRO_ZOUT_H: u8 = 0x47;
-const REG_GYRO_ZOUT_L: u8 = 0x48;
+const _REG_GYRO_XOUT_H: u8 = 0x43;
+const _REG_GYRO_XOUT_L: u8 = 0x44;
+const _REG_GYRO_YOUT_H: u8 = 0x45;
+const _REG_GYRO_YOUT_L: u8 = 0x46;
+const _REG_GYRO_ZOUT_H: u8 = 0x47;
+const _REG_GYRO_ZOUT_L: u8 = 0x48;
 
-const REG_USER_CTRL: u8 = 0x6A;
-const I2C_INTERFACE_DISABLED: u8 = 0b0001_0000;
+const _REG_USER_CTRL: u8 = 0x6A;
+const _I2C_INTERFACE_DISABLED: u8 = 0b0001_0000;
 
 const REG_PWR_MGMT_1: u8 = 0x6B;
-const CLKSEL_INTERNAL_8_MHZ: u8 = 0x00;
-const CLKSEL_PLL_X_AXIS_GYRO: u8 = 0x01;
-const CLKSEL_PLL_Y_AXIS_GYRO: u8 = 0x02;
+const _CLKSEL_INTERNAL_8_MHZ: u8 = 0x00;
+const _CLKSEL_PLL_X_AXIS_GYRO: u8 = 0x01;
+const _CLKSEL_PLL_Y_AXIS_GYRO: u8 = 0x02;
 const CLKSEL_PLL_Z_AXIS_GYRO: u8 = 0x03;
-const CLKSEL_EXTERNAL_32768_HZ: u8 = 0x04;
-const CLKSEL_EXTERNAL_19P2_MHZ: u8 = 0x05;
+const _CLKSEL_EXTERNAL_32768_HZ: u8 = 0x04;
+const _CLKSEL_EXTERNAL_19P2_MHZ: u8 = 0x05;
 
 const REG_PWR_MGMT_2: u8 = 0x6C;
 
-const REG_WHO_AM_I: u8 = 0x75;
+const _REG_WHO_AM_I: u8 = 0x75;
 // **** IMU Registers and associated bitflags ****
 
 /// MPU6000 is SPI variant of MPU6050
@@ -108,7 +108,7 @@ impl<B: ImuBus> Mpu6050<B> {
         }
     }
 
-    async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
         self.bus.read_register(reg).await
     }
 
@@ -118,6 +118,23 @@ impl<B: ImuBus> Mpu6050<B> {
         gyro_sensitivity: u8,
         acc_sensitivity: u8,
     ) -> Result<(u8, u8), B::Error> {
+        // clock source: PLL with Z axis gyro reference
+        self.bus.write_register(REG_PWR_MGMT_1, CLKSEL_PLL_Z_AXIS_GYRO).await?;
+        delay_ms(15);
+        self.bus.write_register(REG_PWR_MGMT_2, 0x00).await?;
+        delay_ms(15);
+
+        // Configure interrupts
+        self.bus
+            .write_register(
+                REG_INT_PIN_CONFIG,
+                INT_LEVEL_ACTIVE_HIGH | INT_PUSH_PULL | INT_ENABLE_PULSE | INT_CLEAR_READ_ANY | FSYNCH_INT_DISABLE,
+            )
+            .await?;
+        delay_ms(15);
+        self.bus.write_register(REG_INT_ENABLE, DATA_READY_ENABLE).await?;
+        delay_ms(15);
+
         let gyro_sample_rate_divider = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 4000 {
             0 // div by 1, ie 8kHz
         } else if target_output_data_rate_hz > 2000 {
@@ -324,7 +341,7 @@ mod tests {
     }
     #[test]
     fn imu_state_init_mpu6050() {
-        let mut imu_bus = MockImuBus::new();
+        let imu_bus = MockImuBus::new();
         let mut imu: Mpu6050<MockImuBus> = Mpu6050::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         let result = pollster::block_on(imu.init(8000, ImuCommon::GYRO_FULL_SCALE_MAX, ImuCommon::ACC_FULL_SCALE_MAX));
@@ -339,7 +356,7 @@ mod tests {
     }
     #[test]
     fn map_mpu6050_acc() {
-        let mut imu_bus = MockImuBus::new();
+        let imu_bus = MockImuBus::new();
         let mut imu: Mpu6050<MockImuBus> = Mpu6050::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         let _result = pollster::block_on(imu.init(8000, ImuCommon::GYRO_FULL_SCALE_MAX, ImuCommon::ACC_FULL_SCALE_MAX));

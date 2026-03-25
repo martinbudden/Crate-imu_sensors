@@ -1,86 +1,86 @@
-#![allow(unused)]
+//#![allow(unused)]
 
 use vector_quaternion_matrix::{Vector3df32, Vector3di16};
 
 use crate::{ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
 
 // **** IMU Registers and associated bitflags ****
-const REG_XG_OFFS_TC_H: u8 = 0x04;
-const REG_XG_OFFS_TC_L: u8 = 0x05;
-const REG_YG_OFFS_TC_H: u8 = 0x07;
-const REG_YG_OFFS_TC_L: u8 = 0x08;
-const REG_ZG_OFFS_TC_H: u8 = 0x0A;
-const REG_ZG_OFFS_TC_L: u8 = 0x0B;
+const _REG_XG_OFFS_TC_H: u8 = 0x04;
+const _REG_XG_OFFS_TC_L: u8 = 0x05;
+const _REG_YG_OFFS_TC_H: u8 = 0x07;
+const _REG_YG_OFFS_TC_L: u8 = 0x08;
+const _REG_ZG_OFFS_TC_H: u8 = 0x0A;
+const _REG_ZG_OFFS_TC_L: u8 = 0x0B;
 
-const REG_SELF_TEST_X_ACCEL: u8 = 0x0D;
-const REG_SELF_TEST_Y_ACCEL: u8 = 0x0E;
-const REG_SELF_TEST_Z_ACCEL: u8 = 0x0F;
+const _REG_SELF_TEST_X_ACCEL: u8 = 0x0D;
+const _REG_SELF_TEST_Y_ACCEL: u8 = 0x0E;
+const _REG_SELF_TEST_Z_ACCEL: u8 = 0x0F;
 
-const REG_XG_OFFS_USRH: u8 = 0x13;
-const REG_XG_OFFS_USRL: u8 = 0x14;
-const REG_YG_OFFS_USRH: u8 = 0x15;
-const REG_YG_OFFS_USRL: u8 = 0x16;
-const REG_ZG_OFFS_USRH: u8 = 0x17;
-const REG_ZG_OFFS_USRL: u8 = 0x18;
+const _REG_XG_OFFS_USRH: u8 = 0x13;
+const _REG_XG_OFFS_USRL: u8 = 0x14;
+const _REG_YG_OFFS_USRH: u8 = 0x15;
+const _REG_YG_OFFS_USRL: u8 = 0x16;
+const _REG_ZG_OFFS_USRH: u8 = 0x17;
+const _REG_ZG_OFFS_USRL: u8 = 0x18;
 
 const REG_SAMPLE_RATE_DIVIDER: u8 = 0x19;
-const DIVIDE_BY_1: u8 = 0x00;
+const _DIVIDE_BY_1: u8 = 0x00;
 const DIVIDE_BY_2: u8 = 0x01;
 
 const REG_CONFIG: u8 = 0x1A;
 const DLPF_CFG_1: u8 = 0x01;
-const DLPF_CFG_7: u8 = 0x07;
+const _DLPF_CFG_7: u8 = 0x07;
 
 const REG_GYRO_CONFIG: u8 = 0x1B;
 const REG_ACCEL_CONFIG: u8 = 0x1C;
 const REG_ACCEL_CONFIG2: u8 = 0x1D;
 
 const REG_FIFO_ENABLE: u8 = 0x23;
-const GYRO_FIFO_EN: u8 = 0b00001000;
-const ACC_FIFO_EN: u8 = 0b00000100;
+const _GYRO_FIFO_EN: u8 = 0b00001000;
+const _ACC_FIFO_EN: u8 = 0b00000100;
 
 const REG_INT_PIN_CFG: u8 = 0x37;
 const REG_INT_ENABLE: u8 = 0x38;
-const FIFO_WM_INT_STATUS: u8 = 0x39;
+const _FIFO_WM_INT_STATUS: u8 = 0x39;
 
-const REG_ACCEL_XOUT_H: u8 = 0x3B;
-const REG_ACCEL_XOUT_L: u8 = 0x3C;
-const REG_ACCEL_YOUT_H: u8 = 0x3D;
-const REG_ACCEL_YOUT_L: u8 = 0x3E;
-const REG_ACCEL_ZOUT_H: u8 = 0x3F;
-const REG_ACCEL_ZOUT_L: u8 = 0x40;
+const _REG_ACCEL_XOUT_H: u8 = 0x3B;
+const _REG_ACCEL_XOUT_L: u8 = 0x3C;
+const _REG_ACCEL_YOUT_H: u8 = 0x3D;
+const _REG_ACCEL_YOUT_L: u8 = 0x3E;
+const _REG_ACCEL_ZOUT_H: u8 = 0x3F;
+const _REG_ACCEL_ZOUT_L: u8 = 0x40;
 
-const REG_TEMP_OUT_H: u8 = 0x41;
-const REG_TEMP_OUT_L: u8 = 0x42;
+const _REG_TEMP_OUT_H: u8 = 0x41;
+const _REG_TEMP_OUT_L: u8 = 0x42;
 
-const REG_GYRO_XOUT_H: u8 = 0x43;
-const REG_GYRO_XOUT_L: u8 = 0x44;
-const REG_GYRO_YOUT_H: u8 = 0x45;
-const REG_GYRO_YOUT_L: u8 = 0x46;
-const REG_GYRO_ZOUT_H: u8 = 0x47;
-const REG_GYRO_ZOUT_L: u8 = 0x48;
+const _REG_GYRO_XOUT_H: u8 = 0x43;
+const _REG_GYRO_XOUT_L: u8 = 0x44;
+const _REG_GYRO_YOUT_H: u8 = 0x45;
+const _REG_GYRO_YOUT_L: u8 = 0x46;
+const _REG_GYRO_ZOUT_H: u8 = 0x47;
+const _REG_GYRO_ZOUT_L: u8 = 0x48;
 
-const REG_FIFO_WM_TH1: u8 = 0x60;
-const REG_FIFO_WM_TH2: u8 = 0x61;
+const _REG_FIFO_WM_TH1: u8 = 0x60;
+const _REG_FIFO_WM_TH2: u8 = 0x61;
 
-const REG_SIGNAL_PATH_RESET: u8 = 0x68;
-const REG_ACCEL_INTEL_CTRL: u8 = 0x69;
+const _REG_SIGNAL_PATH_RESET: u8 = 0x68;
+const _REG_ACCEL_INTEL_CTRL: u8 = 0x69;
 const REG_USER_CTRL: u8 = 0x6A;
 const REG_PWR_MGMT_1: u8 = 0x6B;
-const REG_PWR_MGMT_2: u8 = 0x6C;
+const _REG_PWR_MGMT_2: u8 = 0x6C;
 
-const REG_FIFO_COUNT_H: u8 = 0x72;
-const REG_FIFO_COUNT_L: u8 = 0x73;
-const REG_FIFO_R_W: u8 = 0x74;
+const _REG_FIFO_COUNT_H: u8 = 0x72;
+const _REG_FIFO_COUNT_L: u8 = 0x73;
+const _REG_FIFO_R_W: u8 = 0x74;
 
 const REG_WHO_AM_I: u8 = 0x75;
 
-const REG_XA_OFFSET_H: u8 = 0x77;
-const REG_XA_OFFSET_L: u8 = 0x78;
-const REG_YA_OFFSET_H: u8 = 0x7A;
-const REG_YA_OFFSET_L: u8 = 0x7B;
-const REG_ZA_OFFSET_H: u8 = 0x7D;
-const REG_ZA_OFFSET_L: u8 = 0x7E;
+const _REG_XA_OFFSET_H: u8 = 0x77;
+const _REG_XA_OFFSET_L: u8 = 0x78;
+const _REG_YA_OFFSET_H: u8 = 0x7A;
+const _REG_YA_OFFSET_L: u8 = 0x7B;
+const _REG_ZA_OFFSET_H: u8 = 0x7D;
+const _REG_ZA_OFFSET_L: u8 = 0x7E;
 // **** IMU Registers and associated bitflags ****
 
 pub struct Mpu6886<B: ImuBus> {
@@ -108,19 +108,84 @@ impl<B: ImuBus> Mpu6886<B> {
         }
     }
 
-    async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
         self.bus.read_register(reg).await
     }
 
     pub async fn init(
         &mut self,
-        target_output_data_rate_hz: u32,
-        gyro_sensitivity: u8,
-        acc_sensitivity: u8,
+        _target_output_data_rate_hz: u32,
+        _gyro_sensitivity: u8,
+        _acc_sensitivity: u8,
     ) -> Result<(u8, u8), B::Error> {
+        let _chip_id = self.bus.read_register(REG_WHO_AM_I).await;
+        delay_ms(1);
+
+        self.bus.write_register(REG_PWR_MGMT_1, 0).await?; // clear the power management register
+        delay_ms(10);
+
+        const DEVICE_RESET: u8 = 0x01u8 << 7;
+        self.bus.write_register(REG_PWR_MGMT_1, DEVICE_RESET).await?; // reset the device
+        delay_ms(10);
+
+        const CLKSEL_1: u8 = 0x01;
+        self.bus.write_register(REG_PWR_MGMT_1, CLKSEL_1).await?; // CLKSEL must be set to 001 to achieve full gyroscope performance.
+        delay_ms(10);
+
+        // Gyro scale is fixed at 2000DPS, the maximum supported.
+        //enum gyro_scale_e { GFS_250DPS = 0, GFS_500DPS = 1, GFS_1000DPS = 2, GFS_2000DPS = 3 };
+        const GFS_2000DPS: u8 = 3;
+        const GYRO_FCHOICE_B: u8 = 0x00; // enables gyro update rate and filter configuration using REG_CONFIG
+        self.bus.write_register(REG_GYRO_CONFIG, (GFS_2000DPS << 3) | GYRO_FCHOICE_B).await?;
+        self.common.gyro_scale_dps = 2000.0 / 32768.0;
+        self.common.gyro_scale_rps = self.common.gyro_scale_rps.to_radians();
+        delay_ms(1);
+
+        // Accelerometer scale is fixed at 8G, the maximum supported.
+        //enum acc_scale_e { AFS_2G = 0, AFS_4G = 1, AFS_8G = 2, AFS_16G = 3 };
+        const AFS_8G: u8 = 2;
+        self.bus.write_register(REG_ACCEL_CONFIG, AFS_8G << 3).await?;
+        self.common.acc_scale = 8.0 / 32768.0;
+        delay_ms(1);
+
+        const ACC_FCHOICE_B: u8 = 0x00; // Filter:218.1 3-DB BW (Hz), least filtered 1kHz update variant
+        self.bus.write_register(REG_ACCEL_CONFIG2, ACC_FCHOICE_B).await?;
+        delay_ms(1);
+
+        const FIFO_MODE_OVERWRITE: u8 = 0b01000000;
+        self.bus.write_register(REG_CONFIG, DLPF_CFG_1 | FIFO_MODE_OVERWRITE).await?;
+        delay_ms(1);
+
+        // M5Stack default divider is two, giving 500Hz output rate
+        self.bus.write_register(REG_SAMPLE_RATE_DIVIDER, DIVIDE_BY_2).await?;
+        delay_ms(1);
+        self.common.gyro_sample_rate_hz = 500;
+        self.common.acc_sample_rate_hz = 500;
+
+        self.bus.write_register(REG_FIFO_ENABLE, 0x00).await?; // FIFO disabled
+        delay_ms(1);
+
+        // M5 Unified settings
+        //self.bus.write_register(REG_INT_PIN_CFG, 0b11000000).await; // Active low, open drain 50us pulse width, clear on read
+        self.bus.write_register(REG_INT_PIN_CFG, 0x22).await?;
+        delay_ms(1);
+
+        const DATA_RDY_INT_EN: u8 = 0x01;
+        self.bus.write_register(REG_INT_ENABLE, DATA_RDY_INT_EN).await?; // data ready interrupt enabled
+        delay_ms(10);
+
+        self.bus.write_register(REG_USER_CTRL, 0x00).await?;
+
+        //bus_semaphore_give(_bus_mutex);
+        delay_ms(1);
+
+        // return the gyro sample rate actually set
         Ok((0, 0))
     }
 
+    // NOTE: Not sure if this is the right place to put this code, but it "wanted" to go here.
+    // It just kept floating upward until it reached this point.
+    // And it makes it easily accessible from test code.
     pub fn map_acc(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let acc16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
@@ -175,7 +240,7 @@ mod tests {
     }
     #[test]
     fn imu_state_init_mpu6886() {
-        let mut imu_bus = MockImuBus::new();
+        let imu_bus = MockImuBus::new();
         let mut imu: Mpu6886<MockImuBus> = Mpu6886::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         let result = pollster::block_on(imu.init(8000, ImuCommon::GYRO_FULL_SCALE_MAX, ImuCommon::ACC_FULL_SCALE_MAX));
@@ -190,8 +255,8 @@ mod tests {
     }
     #[test]
     fn map_lsm6ds_acc() {
-        let mut imu_bus = MockImuBus::new();
-        let mut imu: Mpu6886<MockImuBus> = Mpu6886::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let imu_bus = MockImuBus::new();
+        let _imu: Mpu6886<MockImuBus> = Mpu6886::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         // TODO: sit down and work out some useful test data for this
         //let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
