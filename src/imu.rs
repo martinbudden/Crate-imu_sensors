@@ -29,9 +29,7 @@ impl ImuCommon {
     pub const ACC_FULL_SCALE_8G: u8 = 4;
     pub const ACC_FULL_SCALE_16G: u8 = 5;
     pub const ACC_FULL_SCALE_32G: u8 = 6;
-}
 
-impl ImuCommon {
     fn new() -> Self {
         const GYRO_2000DPS_RES: f32 = 2000.0 / 32768.0;
         const ACC_8G_RES: f32 = 8.0 / 32768.0;
@@ -65,13 +63,7 @@ pub struct ImuConfig {
 
 impl Default for ImuConfig {
     fn default() -> Self {
-        Self {
-            gyro_id_msp: 0,
-            acc_id_msp: 0,
-            device_id: 0, // 8-bit id assigned by IMU manufacturer
-            axis_order: ImuAxesOrder::XPOS_YPOS_ZPOS,
-            flags: 0, // Flags for describing IMU characteristics
-        }
+        Self::new()
     }
 }
 
@@ -95,6 +87,16 @@ impl ImuConfig {
     pub const MSP_GYRO_ID_ICM42688P: u16 = 13;
     pub const MSP_GYRO_ID_LSM6DS: u16 = 18;
     pub const MSP_GYRO_ID_VIRTUAL: u16 = 20;
+
+    fn new() -> Self {
+        Self {
+            gyro_id_msp: 0,
+            acc_id_msp: 0,
+            device_id: 0, // 8-bit id assigned by IMU manufacturer
+            axis_order: ImuAxesOrder::XPOS_YPOS_ZPOS,
+            flags: 0, // Flags for describing IMU characteristics
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

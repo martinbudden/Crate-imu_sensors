@@ -239,7 +239,7 @@ mod tests {
         is_normal::<Mpu6886<MockImuBus>>();
     }
     #[test]
-    fn imu_state_init_mpu6886() {
+    fn imu_init() {
         let imu_bus = MockImuBus::new();
         let mut imu: Mpu6886<MockImuBus> = Mpu6886::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
@@ -254,13 +254,13 @@ mod tests {
         //assert_eq!(6664, state.acc_sample_rate_hz);
     }
     #[test]
-    fn map_lsm6ds_acc() {
+    fn map_acc() {
         let imu_bus = MockImuBus::new();
-        let _imu: Mpu6886<MockImuBus> = Mpu6886::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let imu: Mpu6886<MockImuBus> = Mpu6886::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         // TODO: sit down and work out some useful test data for this
-        //let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
-        //let acc = state.map_mpu6886_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);
-        //assert_eq!(Vector3df32 { x: 0.0, y: 0.0, z: 0.0 }, acc);
+        let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
+        let acc = imu.map_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        assert_eq!(Vector3df32 { x: 0.0, y: 0.0, z: 0.0 }, acc);
     }
 }

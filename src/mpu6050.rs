@@ -340,7 +340,7 @@ mod tests {
         is_normal::<Mpu6050<MockImuBus>>();
     }
     #[test]
-    fn imu_state_init_mpu6050() {
+    fn imu_init() {
         let imu_bus = MockImuBus::new();
         let mut imu: Mpu6050<MockImuBus> = Mpu6050::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
@@ -355,15 +355,15 @@ mod tests {
         assert_eq!(1000, imu.common.acc_sample_rate_hz);
     }
     #[test]
-    fn map_mpu6050_acc() {
+    fn map_acc() {
         let imu_bus = MockImuBus::new();
         let mut imu: Mpu6050<MockImuBus> = Mpu6050::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         let _result = pollster::block_on(imu.init(8000, ImuCommon::GYRO_FULL_SCALE_MAX, ImuCommon::ACC_FULL_SCALE_MAX));
 
         // TODO: sit down and work out some useful test data for this
-        //let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
-        //let acc = common.map_mpu6050_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);
-        //assert_eq!(Vector3df32 { x: 0.0, y: 0.0, z: 0.0 }, acc);
+        let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
+        let acc = imu.map_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        assert_eq!(Vector3df32 { x: 0.0, y: 0.0, z: 0.0 }, acc);
     }
 }

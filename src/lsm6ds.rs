@@ -353,7 +353,7 @@ mod tests {
         is_normal::<Lsm6ds<MockImuBus>>();
     }
     #[test]
-    fn imu_state_init_lsm6ds() {
+    fn imu_init() {
         let mut imu_bus = MockImuBus::new();
         assert_eq!(0, imu_bus.registers[REG_CTRL3_C as usize]);
         imu_bus.registers[REG_CTRL3_C as usize] = 4;
