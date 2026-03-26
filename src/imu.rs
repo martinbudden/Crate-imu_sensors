@@ -129,14 +129,17 @@ pub trait Imu {
     fn common_mut(&mut self) -> &mut ImuCommon;
     fn config(&self) -> &ImuConfig;
 
-    // TODO: implement async versions of functions
     #[allow(async_fn_in_trait)]
     async fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error>;
+
     #[allow(async_fn_in_trait)]
     async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>;
-    fn read_gyro_rps(&mut self) -> Vector3df32;
-    //fn read_acc(&mut self) -> Vector3df32;
-    fn read_acc_gyro_rps(&mut self) -> ImuReadingf32;
+
+    #[allow(async_fn_in_trait)]
+    async fn read_gyro_rps(&mut self) -> Result<Vector3df32, Self::Error>;
+
+    #[allow(async_fn_in_trait)]
+    async fn read_acc_gyro_rps(&mut self) -> Result<ImuReadingf32, Self::Error>;
 
     fn gyro_offset(&self) -> Vector3df32 {
         self.common().gyro_offset

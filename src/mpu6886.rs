@@ -2,7 +2,9 @@
 
 use vector_quaternion_matrix::{Vector3df32, Vector3di16};
 
-use crate::{ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
+use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
+
+const I2C_ADDRESS: u8 = 0x00; // TODO: get correct I2C address.
 
 // **** IMU Registers and associated bitflags ****
 const _REG_XG_OFFS_TC_H: u8 = 0x04;
@@ -43,7 +45,7 @@ const REG_INT_PIN_CFG: u8 = 0x37;
 const REG_INT_ENABLE: u8 = 0x38;
 const _FIFO_WM_INT_STATUS: u8 = 0x39;
 
-const _REG_ACCEL_XOUT_H: u8 = 0x3B;
+const REG_ACCEL_XOUT_H: u8 = 0x3B;
 const _REG_ACCEL_XOUT_L: u8 = 0x3C;
 const _REG_ACCEL_YOUT_H: u8 = 0x3D;
 const _REG_ACCEL_YOUT_L: u8 = 0x3E;
@@ -53,7 +55,7 @@ const _REG_ACCEL_ZOUT_L: u8 = 0x40;
 const _REG_TEMP_OUT_H: u8 = 0x41;
 const _REG_TEMP_OUT_L: u8 = 0x42;
 
-const _REG_GYRO_XOUT_H: u8 = 0x43;
+const REG_GYRO_XOUT_H: u8 = 0x43;
 const _REG_GYRO_XOUT_L: u8 = 0x44;
 const _REG_GYRO_YOUT_H: u8 = 0x45;
 const _REG_GYRO_YOUT_L: u8 = 0x46;
@@ -87,6 +89,61 @@ pub struct Mpu6886<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,
     pub config: ImuConfig,
+}
+
+impl<B: ImuBus> Imu for Mpu6886<B> {
+    type Bus = B;
+    type Error = <B as ImuBus>::Error;
+
+    async fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
+        // On the Pico, I2C write_read is natively async.
+        // We just delegate the call and .await the result.
+        self.bus.bus_write_read(address, write, read).await
+    }
+
+    async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 6];
+        self.write_read(I2C_ADDRESS, &[REG_ACCEL_XOUT_H], &mut buf).await?;
+        Ok(self.map_gyro_rps(buf, self.config.axis_order))
+    }
+
+    async fn read_gyro_rps(&mut self) -> Result<Vector3df32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 6];
+        self.write_read(I2C_ADDRESS, &[REG_GYRO_XOUT_H], &mut buf).await?;
+        //self.bus().read_registers(REG_GYRO_XOUT_H, &mut buf).await;
+        Ok(self.map_gyro_rps(buf, self.config.axis_order))
+    }
+
+    async fn read_acc_gyro_rps(&mut self) -> Result<ImuReadingf32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 12];
+        self.write_read(I2C_ADDRESS, &[REG_GYRO_XOUT_H], &mut buf).await?;
+        Ok(self.map_acc_gyro_rps(buf, self.config.axis_order))
+    }
+
+    fn bus(&mut self) -> &mut Self::Bus {
+        &mut self.bus
+    }
+
+    fn common(&self) -> &ImuCommon {
+        &self.common
+    }
+
+    fn common_mut(&mut self) -> &mut ImuCommon {
+        &mut self.common
+    }
+
+    fn config(&self) -> &ImuConfig {
+        &self.config
+    }
 }
 
 fn delay_ms(_delay: u32) {}

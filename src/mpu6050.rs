@@ -4,6 +4,8 @@ use vector_quaternion_matrix::{Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
 
+const I2C_ADDRESS: u8 = 0x68;
+
 // **** IMU Registers and associated bitflags ****
 const _REG_SAMPLE_RATE_DIVIDER: u8 = 0x19;
 const _REG_CONFIG: u8 = 0x1A;
@@ -46,7 +48,7 @@ const DATA_READY_ENABLE: u8 = 0b00000001;
 
 const _REG_INT_STATUS: u8 = 0x3A;
 
-const _REG_ACCEL_XOUT_H: u8 = 0x3B;
+const REG_ACCEL_XOUT_H: u8 = 0x3B;
 const _REG_ACCEL_XOUT_L: u8 = 0x3C;
 const _REG_ACCEL_YOUT_H: u8 = 0x3D;
 const _REG_ACCEL_YOUT_L: u8 = 0x3E;
@@ -56,7 +58,7 @@ const _REG_ACCEL_ZOUT_L: u8 = 0x40;
 const _REG_TEMP_OUT_H: u8 = 0x41;
 const _REG_TEMP_OUT_L: u8 = 0x42;
 
-const _REG_GYRO_XOUT_H: u8 = 0x43;
+const REG_GYRO_XOUT_H: u8 = 0x43;
 const _REG_GYRO_XOUT_L: u8 = 0x44;
 const _REG_GYRO_YOUT_H: u8 = 0x45;
 const _REG_GYRO_YOUT_L: u8 = 0x46;
@@ -103,22 +105,27 @@ impl<B: ImuBus> Imu for Mpu6050<B> {
         <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
     {
         let mut buf = [0u8; 6];
-        self.write_read(0x68, &[0x3B], &mut buf).await?;
-        let ret: Vector3df32 = self.map_gyro_rps(buf, self.config.axis_order);
-        Ok(ret)
-    }
-    //async fn read_gyro_rps(&mut self) -> impl core::future::Future<Output = Result<(),Self::Error>> {
-    fn read_gyro_rps(&mut self) -> Vector3df32 {
-        let buf = [0u8; 6];
-        //self.bus().read_registers(REG_GYRO_XOUT_H, &mut buf).await;
-        self.map_gyro_rps(buf, self.config.axis_order)
+        self.write_read(I2C_ADDRESS, &[REG_ACCEL_XOUT_H], &mut buf).await?;
+        Ok(self.map_gyro_rps(buf, self.config.axis_order))
     }
 
-    //fn read_acc_gyro_rps(&mut self) -> impl core::future::Future<Output = Result<(),Self::Error>> {
-    fn read_acc_gyro_rps(&mut self) -> ImuReadingf32 {
-        let buf = [0u8; 14];
-        //self.bus().read_registers(REG_ACCEL_XOUT_H, &mut buf).await;
-        self.map_acc_gyro_rps(buf, self.config.axis_order)
+    async fn read_gyro_rps(&mut self) -> Result<Vector3df32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 6];
+        self.write_read(I2C_ADDRESS, &[REG_GYRO_XOUT_H], &mut buf).await?;
+        //self.bus().read_registers(REG_GYRO_XOUT_H, &mut buf).await;
+        Ok(self.map_gyro_rps(buf, self.config.axis_order))
+    }
+
+    async fn read_acc_gyro_rps(&mut self) -> Result<ImuReadingf32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 14];
+        self.write_read(I2C_ADDRESS, &[REG_GYRO_XOUT_H], &mut buf).await?;
+        Ok(self.map_acc_gyro_rps(buf, self.config.axis_order))
     }
 
     fn bus(&mut self) -> &mut Self::Bus {
@@ -137,6 +144,7 @@ impl<B: ImuBus> Imu for Mpu6050<B> {
         &self.config
     }
 }
+
 fn delay_ms(_delay: u32) {}
 
 impl<B: ImuBus> Mpu6050<B> {
