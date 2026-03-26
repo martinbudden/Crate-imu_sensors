@@ -24,3 +24,9 @@ pub use lsm6ds::Lsm6ds;
 pub use mpu6050::Mpu6050;
 pub use mpu6886::Mpu6886;
 pub use spi::SpiInterface;
+
+/*
+In main:
+let cs_pin = Output::new(p.PIN_1.into(), Level::High); // .into() converts to AnyPin
+let wrapper = SpiBusWrapper { spi, cs: cs_pin };
+*/

@@ -143,7 +143,7 @@ impl<'d, T: Instance> ImuBus for I2c<'d, T, Async> {
     }
 }
 
-#[cfg(all(feature = "rp2040", feature = "spi"))]
+/*#[cfg(all(feature = "rp2040", feature = "spi"))]
 pub struct SpiBusWrapper<'d, T: Instance, CS: Pin> {
     pub spi: Spi<'d, T, Async>,
     // Remove CS from the angle brackets here
@@ -173,17 +173,19 @@ impl<'d, T: Instance, CS: embassy_rp::gpio::Pin> SpiBusWrapper<'d, T, CS> {
         Ok(())
     }
 }
+*/
+#[cfg(all(feature = "rp2040", feature = "spi"))]
+pub struct SpiBusWrapper<'d, T: Instance> {
+    pub spi: Spi<'d, T, Async>,
+    pub cs: Output<'d>,
+}
 
 #[cfg(all(feature = "rp2040", feature = "spi"))]
-impl<'d, T: Instance, CS: embassy_rp::gpio::Pin> ImuBus for SpiBusWrapper<'d, T, CS> {
+impl<'d, T: Instance> ImuBus for SpiBusWrapper<'d, T> {
+    //impl<'d, T: Instance, CS: embassy_rp::gpio::Pin> ImuBus for SpiBusWrapper<'d, T, CS> {
     type Error = embassy_rp::spi::Error;
 
-    async fn bus_write_read(
-        &mut self,
-        _address: u8, // Unused for SPI
-        write: &[u8],
-        read: &mut [u8],
-    ) -> Result<(), Self::Error> {
+    async fn bus_write_read(&mut self, _addr: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
         self.cs.set_low(); // Pull CS low to start transaction
 
         // Use transfer for full-duplex SPI communication
