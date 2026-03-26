@@ -57,6 +57,7 @@ pub struct ImuConfig {
     pub gyro_id_msp: u16,
     pub acc_id_msp: u16,
     pub device_id: u8, // 8-bit id assigned by IMU manufacturer
+    pub address: u8,
     pub axis_order: ImuAxesOrder,
     pub flags: u8, // Flags for describing IMU characteristics
 }
@@ -93,6 +94,7 @@ impl ImuConfig {
             gyro_id_msp: 0,
             acc_id_msp: 0,
             device_id: 0, // 8-bit id assigned by IMU manufacturer
+            address: 0,
             axis_order: ImuAxesOrder::XPOS_YPOS_ZPOS,
             flags: 0, // Flags for describing IMU characteristics
         }

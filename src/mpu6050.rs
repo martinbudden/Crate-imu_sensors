@@ -5,6 +5,7 @@ use vector_quaternion_matrix::{Vector3df32, Vector3di16};
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
 
 const I2C_ADDRESS: u8 = 0x68;
+const _I2C_ADDRESS_ALTERNATIVE: u8 = 0x69;
 
 // **** IMU Registers and associated bitflags ****
 const _REG_SAMPLE_RATE_DIVIDER: u8 = 0x19;
@@ -94,6 +95,22 @@ impl<B: ImuBus> Imu for Mpu6050<B> {
     type Bus = B;
     type Error = <B as ImuBus>::Error;
 
+    fn bus(&mut self) -> &mut Self::Bus {
+        &mut self.bus
+    }
+
+    fn common(&self) -> &ImuCommon {
+        &self.common
+    }
+
+    fn common_mut(&mut self) -> &mut ImuCommon {
+        &mut self.common
+    }
+
+    fn config(&self) -> &ImuConfig {
+        &self.config
+    }
+
     async fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
         // On the Pico, I2C write_read is natively async.
         // We just delegate the call and .await the result.
@@ -115,7 +132,7 @@ impl<B: ImuBus> Imu for Mpu6050<B> {
     {
         let mut buf = [0u8; 6];
         self.write_read(I2C_ADDRESS, &[REG_GYRO_XOUT_H], &mut buf).await?;
-        //self.bus().read_registers(REG_GYRO_XOUT_H, &mut buf).await;
+        //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
         Ok(self.map_gyro_rps(buf, self.config.axis_order))
     }
 
@@ -126,22 +143,6 @@ impl<B: ImuBus> Imu for Mpu6050<B> {
         let mut buf = [0u8; 14];
         self.write_read(I2C_ADDRESS, &[REG_GYRO_XOUT_H], &mut buf).await?;
         Ok(self.map_acc_gyro_rps(buf, self.config.axis_order))
-    }
-
-    fn bus(&mut self) -> &mut Self::Bus {
-        &mut self.bus
-    }
-
-    fn common(&self) -> &ImuCommon {
-        &self.common
-    }
-
-    fn common_mut(&mut self) -> &mut ImuCommon {
-        &mut self.common
-    }
-
-    fn config(&self) -> &ImuConfig {
-        &self.config
     }
 }
 
@@ -159,13 +160,14 @@ impl<B: ImuBus> Mpu6050<B> {
                 acc_id_msp: ImuConfig::MSP_ACC_ID_MPU6050,
                 axis_order,
                 device_id: Self::DEVICE_ID,
+                address: I2C_ADDRESS,
                 flags: 0,
             },
         }
     }
 
     pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
-        self.bus.read_register(reg).await
+        self.bus.read_register(self.config.address, reg).await
     }
 
     pub async fn init(
@@ -175,20 +177,21 @@ impl<B: ImuBus> Mpu6050<B> {
         acc_sensitivity: u8,
     ) -> Result<(u8, u8), B::Error> {
         // clock source: PLL with Z axis gyro reference
-        self.bus.write_register(REG_PWR_MGMT_1, CLKSEL_PLL_Z_AXIS_GYRO).await?;
+        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, CLKSEL_PLL_Z_AXIS_GYRO).await?;
         delay_ms(15);
-        self.bus.write_register(REG_PWR_MGMT_2, 0x00).await?;
+        self.bus.write_register(self.config.address, REG_PWR_MGMT_2, 0x00).await?;
         delay_ms(15);
 
         // Configure interrupts
         self.bus
             .write_register(
+                self.config.address,
                 REG_INT_PIN_CONFIG,
                 INT_LEVEL_ACTIVE_HIGH | INT_PUSH_PULL | INT_ENABLE_PULSE | INT_CLEAR_READ_ANY | FSYNCH_INT_DISABLE,
             )
             .await?;
         delay_ms(15);
-        self.bus.write_register(REG_INT_ENABLE, DATA_READY_ENABLE).await?;
+        self.bus.write_register(self.config.address, REG_INT_ENABLE, DATA_READY_ENABLE).await?;
         delay_ms(15);
 
         let gyro_sample_rate_divider = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 4000 {

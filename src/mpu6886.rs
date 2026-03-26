@@ -4,7 +4,7 @@ use vector_quaternion_matrix::{Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
 
-const I2C_ADDRESS: u8 = 0x00; // TODO: get correct I2C address.
+const I2C_ADDRESS: u8 = 0x68;
 
 // **** IMU Registers and associated bitflags ****
 const _REG_XG_OFFS_TC_H: u8 = 0x04;
@@ -95,6 +95,22 @@ impl<B: ImuBus> Imu for Mpu6886<B> {
     type Bus = B;
     type Error = <B as ImuBus>::Error;
 
+    fn bus(&mut self) -> &mut Self::Bus {
+        &mut self.bus
+    }
+
+    fn common(&self) -> &ImuCommon {
+        &self.common
+    }
+
+    fn common_mut(&mut self) -> &mut ImuCommon {
+        &mut self.common
+    }
+
+    fn config(&self) -> &ImuConfig {
+        &self.config
+    }
+
     async fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
         // On the Pico, I2C write_read is natively async.
         // We just delegate the call and .await the result.
@@ -116,7 +132,7 @@ impl<B: ImuBus> Imu for Mpu6886<B> {
     {
         let mut buf = [0u8; 6];
         self.write_read(I2C_ADDRESS, &[REG_GYRO_XOUT_H], &mut buf).await?;
-        //self.bus().read_registers(REG_GYRO_XOUT_H, &mut buf).await;
+        //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
         Ok(self.map_gyro_rps(buf, self.config.axis_order))
     }
 
@@ -127,22 +143,6 @@ impl<B: ImuBus> Imu for Mpu6886<B> {
         let mut buf = [0u8; 12];
         self.write_read(I2C_ADDRESS, &[REG_GYRO_XOUT_H], &mut buf).await?;
         Ok(self.map_acc_gyro_rps(buf, self.config.axis_order))
-    }
-
-    fn bus(&mut self) -> &mut Self::Bus {
-        &mut self.bus
-    }
-
-    fn common(&self) -> &ImuCommon {
-        &self.common
-    }
-
-    fn common_mut(&mut self) -> &mut ImuCommon {
-        &mut self.common
-    }
-
-    fn config(&self) -> &ImuConfig {
-        &self.config
     }
 }
 
@@ -160,13 +160,14 @@ impl<B: ImuBus> Mpu6886<B> {
                 acc_id_msp: ImuConfig::MSP_ACC_ID_DEFAULT,
                 axis_order,
                 device_id: Self::DEVICE_ID,
+                address: I2C_ADDRESS,
                 flags: 0,
             },
         }
     }
 
     pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
-        self.bus.read_register(reg).await
+        self.bus.read_register(self.config.address, reg).await
     }
 
     pub async fn init(
@@ -175,25 +176,25 @@ impl<B: ImuBus> Mpu6886<B> {
         _gyro_sensitivity: u8,
         _acc_sensitivity: u8,
     ) -> Result<(u8, u8), B::Error> {
-        let _chip_id = self.bus.read_register(REG_WHO_AM_I).await;
+        let _chip_id = self.bus.read_register(self.config.address, REG_WHO_AM_I).await;
         delay_ms(1);
 
-        self.bus.write_register(REG_PWR_MGMT_1, 0).await?; // clear the power management register
+        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, 0).await?; // clear the power management register
         delay_ms(10);
 
         const DEVICE_RESET: u8 = 0x01u8 << 7;
-        self.bus.write_register(REG_PWR_MGMT_1, DEVICE_RESET).await?; // reset the device
+        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, DEVICE_RESET).await?; // reset the device
         delay_ms(10);
 
         const CLKSEL_1: u8 = 0x01;
-        self.bus.write_register(REG_PWR_MGMT_1, CLKSEL_1).await?; // CLKSEL must be set to 001 to achieve full gyroscope performance.
+        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, CLKSEL_1).await?; // CLKSEL must be set to 001 to achieve full gyroscope performance.
         delay_ms(10);
 
         // Gyro scale is fixed at 2000DPS, the maximum supported.
         //enum gyro_scale_e { GFS_250DPS = 0, GFS_500DPS = 1, GFS_1000DPS = 2, GFS_2000DPS = 3 };
         const GFS_2000DPS: u8 = 3;
         const GYRO_FCHOICE_B: u8 = 0x00; // enables gyro update rate and filter configuration using REG_CONFIG
-        self.bus.write_register(REG_GYRO_CONFIG, (GFS_2000DPS << 3) | GYRO_FCHOICE_B).await?;
+        self.bus.write_register(self.config.address, REG_GYRO_CONFIG, (GFS_2000DPS << 3) | GYRO_FCHOICE_B).await?;
         self.common.gyro_scale_dps = 2000.0 / 32768.0;
         self.common.gyro_scale_rps = self.common.gyro_scale_rps.to_radians();
         delay_ms(1);
@@ -201,37 +202,37 @@ impl<B: ImuBus> Mpu6886<B> {
         // Accelerometer scale is fixed at 8G, the maximum supported.
         //enum acc_scale_e { AFS_2G = 0, AFS_4G = 1, AFS_8G = 2, AFS_16G = 3 };
         const AFS_8G: u8 = 2;
-        self.bus.write_register(REG_ACCEL_CONFIG, AFS_8G << 3).await?;
+        self.bus.write_register(self.config.address, REG_ACCEL_CONFIG, AFS_8G << 3).await?;
         self.common.acc_scale = 8.0 / 32768.0;
         delay_ms(1);
 
         const ACC_FCHOICE_B: u8 = 0x00; // Filter:218.1 3-DB BW (Hz), least filtered 1kHz update variant
-        self.bus.write_register(REG_ACCEL_CONFIG2, ACC_FCHOICE_B).await?;
+        self.bus.write_register(self.config.address, REG_ACCEL_CONFIG2, ACC_FCHOICE_B).await?;
         delay_ms(1);
 
         const FIFO_MODE_OVERWRITE: u8 = 0b01000000;
-        self.bus.write_register(REG_CONFIG, DLPF_CFG_1 | FIFO_MODE_OVERWRITE).await?;
+        self.bus.write_register(self.config.address, REG_CONFIG, DLPF_CFG_1 | FIFO_MODE_OVERWRITE).await?;
         delay_ms(1);
 
         // M5Stack default divider is two, giving 500Hz output rate
-        self.bus.write_register(REG_SAMPLE_RATE_DIVIDER, DIVIDE_BY_2).await?;
+        self.bus.write_register(self.config.address, REG_SAMPLE_RATE_DIVIDER, DIVIDE_BY_2).await?;
         delay_ms(1);
         self.common.gyro_sample_rate_hz = 500;
         self.common.acc_sample_rate_hz = 500;
 
-        self.bus.write_register(REG_FIFO_ENABLE, 0x00).await?; // FIFO disabled
+        self.bus.write_register(self.config.address, REG_FIFO_ENABLE, 0x00).await?; // FIFO disabled
         delay_ms(1);
 
         // M5 Unified settings
-        //self.bus.write_register(REG_INT_PIN_CFG, 0b11000000).await; // Active low, open drain 50us pulse width, clear on read
-        self.bus.write_register(REG_INT_PIN_CFG, 0x22).await?;
+        //self.bus.write_register(self.config.address, REG_INT_PIN_CFG, 0b11000000).await; // Active low, open drain 50us pulse width, clear on read
+        self.bus.write_register(self.config.address, REG_INT_PIN_CFG, 0x22).await?;
         delay_ms(1);
 
         const DATA_RDY_INT_EN: u8 = 0x01;
-        self.bus.write_register(REG_INT_ENABLE, DATA_RDY_INT_EN).await?; // data ready interrupt enabled
+        self.bus.write_register(self.config.address, REG_INT_ENABLE, DATA_RDY_INT_EN).await?; // data ready interrupt enabled
         delay_ms(10);
 
-        self.bus.write_register(REG_USER_CTRL, 0x00).await?;
+        self.bus.write_register(self.config.address, REG_USER_CTRL, 0x00).await?;
 
         //bus_semaphore_give(_bus_mutex);
         delay_ms(1);

@@ -2,7 +2,10 @@
 
 use vector_quaternion_matrix::{Vector3df32, Vector3di16};
 
-use crate::{ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
+use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
+
+const I2C_ADDRESS: u8 = 0x6A;
+const _I2C_ADDRESS_ALTERNATIVE: u8 = 0x6B;
 
 use cfg_if::cfg_if;
 
@@ -121,13 +124,13 @@ const _REG_STATUS_REG: u8 = 0x1E;
 const _REG_RESERVED_1F: u8 = 0x1F;
 const _REG_OUT_TEMP_L: u8 = 0x20;
 const _REG_OUT_TEMP_H: u8 = 0x22;
-const _REG_OUTX_L_G: u8 = 0x22;
+const REG_OUTX_L_G: u8 = 0x22;
 const _REG_OUTX_H_G: u8 = 0x23;
 const _REG_OUTY_L_G: u8 = 0x24;
 const _REG_OUTY_H_G: u8 = 0x25;
 const _REG_OUTZ_L_G: u8 = 0x26;
 const _REG_OUTZ_H_G: u8 = 0x27;
-const _REG_OUTX_L_ACC: u8 = 0x28;
+const REG_OUTX_L_ACC: u8 = 0x28;
 const _REG_OUTX_H_ACC: u8 = 0x29;
 const _REG_OUTY_L_ACC: u8 = 0x2A;
 const _REG_OUTY_H_ACC: u8 = 0x2B;
@@ -139,6 +142,61 @@ pub struct Lsm6ds<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,
     pub config: ImuConfig,
+}
+
+impl<B: ImuBus> Imu for Lsm6ds<B> {
+    type Bus = B;
+    type Error = <B as ImuBus>::Error;
+
+    fn bus(&mut self) -> &mut Self::Bus {
+        &mut self.bus
+    }
+
+    fn common(&self) -> &ImuCommon {
+        &self.common
+    }
+
+    fn common_mut(&mut self) -> &mut ImuCommon {
+        &mut self.common
+    }
+
+    fn config(&self) -> &ImuConfig {
+        &self.config
+    }
+
+    async fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
+        // On the Pico, I2C write_read is natively async.
+        // We just delegate the call and .await the result.
+        self.bus.bus_write_read(self.config.device_id, write, read).await
+    }
+
+    async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 6];
+        self.write_read(I2C_ADDRESS, &[REG_OUTX_L_ACC], &mut buf).await?;
+        Ok(self.map_gyro_rps(buf, self.config.axis_order))
+    }
+
+    async fn read_gyro_rps(&mut self) -> Result<Vector3df32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 6];
+        self.write_read(I2C_ADDRESS, &[REG_OUTX_L_G], &mut buf).await?;
+        //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
+        Ok(self.map_gyro_rps(buf, self.config.axis_order))
+    }
+
+    async fn read_acc_gyro_rps(&mut self) -> Result<ImuReadingf32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 12];
+        self.write_read(I2C_ADDRESS, &[REG_OUTX_L_G], &mut buf).await?;
+        Ok(self.map_acc_gyro_rps(buf, self.config.axis_order))
+    }
 }
 
 fn delay_ms(_delay: u32) {}
@@ -155,13 +213,14 @@ impl<B: ImuBus> Lsm6ds<B> {
                 acc_id_msp: ImuConfig::MSP_ACC_ID_LSM6DS,
                 axis_order,
                 device_id: Self::DEVICE_ID,
+                address: I2C_ADDRESS,
                 flags: 0,
             },
         }
     }
 
     async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
-        self.bus.read_register(reg).await
+        self.bus.read_register(self.config.address, reg).await
     }
 
     pub async fn init(
@@ -172,20 +231,20 @@ impl<B: ImuBus> Lsm6ds<B> {
     ) -> Result<(u8, u8), B::Error> {
         //if (chip_id != REG_WHO_AM_I_RESPONSE_LSM6DS3TR_C && chip_id != REG_WHO_AM_I_RESPONSE_ISM330DHCX && chip_id != REG_WHO_AM_I_RESPONSE_LSM6DSOX) {
         // software reset
-        self.bus.write_register(REG_CTRL3_C, SW_RESET).await?;
+        self.bus.write_register(self.config.address, REG_CTRL3_C, SW_RESET).await?;
 
         // set data ready pulsed
-        self.bus.write_register(REG_DATA_READY_PULSE_CONFIG, DATA_READY_PULSED).await?;
+        self.bus.write_register(self.config.address, REG_DATA_READY_PULSE_CONFIG, DATA_READY_PULSED).await?;
         delay_ms(1);
 
         // Interrupt pins are by default forced to ground, so active high
-        self.bus.write_register(REG_INT1_CTRL, INT1_DRDY_G).await?; // Enable gyro data ready on INT1 pin
+        self.bus.write_register(self.config.address, REG_INT1_CTRL, INT1_DRDY_G).await?; // Enable gyro data ready on INT1 pin
         delay_ms(1);
 
-        self.bus.write_register(REG_INT2_CTRL, INT2_DRDY_G).await?; // Enable gyro data ready on INT2 pin
+        self.bus.write_register(self.config.address, REG_INT2_CTRL, INT2_DRDY_G).await?; // Enable gyro data ready on INT2 pin
         delay_ms(1);
 
-        self.bus.write_register(REG_CTRL3_C, BDU | IF_INC).await?; // Block Data Update and automatically increment registers when read via serial interface (I2C or SPI)
+        self.bus.write_register(self.config.address, REG_CTRL3_C, BDU | IF_INC).await?; // Block Data Update and automatically increment registers when read via serial interface (I2C or SPI)
         delay_ms(1);
 
         let gyro_odr = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 3332 {
@@ -243,7 +302,7 @@ impl<B: ImuBus> Lsm6ds<B> {
                 gyro_register_value = GYRO_RANGE_2000_DPS | gyro_odr;
             }
         }
-        self.bus.write_register(REG_CTRL2_G, gyro_register_value).await?;
+        self.bus.write_register(self.config.address, REG_CTRL2_G, gyro_register_value).await?;
 
         let acc_odr = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 3332 {
             ACC_ODR_6664_HZ

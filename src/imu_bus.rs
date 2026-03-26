@@ -19,15 +19,26 @@ pub trait ImuBus {
 
     #[allow(async_fn_in_trait)]
     async fn bus_write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error>;
-    fn read_register(&mut self, reg: u8) -> impl core::future::Future<Output = Result<u8, Self::Error>>;
+    fn read_register(&mut self, address: u8, reg: u8) -> impl core::future::Future<Output = Result<u8, Self::Error>>;
     fn read_registers(
         &mut self,
+        address: u8,
         reg: u8,
         data: &mut [u8],
     ) -> impl core::future::Future<Output = Result<(), Self::Error>>;
 
-    fn write_register(&mut self, reg: u8, data: u8) -> impl core::future::Future<Output = Result<(), Self::Error>>;
-    fn write_registers(&mut self, reg: u8, data: &[u8]) -> impl core::future::Future<Output = Result<(), Self::Error>>;
+    fn write_register(
+        &mut self,
+        address: u8,
+        reg: u8,
+        data: u8,
+    ) -> impl core::future::Future<Output = Result<(), Self::Error>>;
+    fn write_registers(
+        &mut self,
+        address: u8,
+        reg: u8,
+        data: &[u8],
+    ) -> impl core::future::Future<Output = Result<(), Self::Error>>;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -53,11 +64,11 @@ impl ImuBus for MockImuBus {
     async fn bus_write_read(&mut self, _address: u8, _write: &[u8], _read: &mut [u8]) -> Result<(), Self::Error> {
         Ok(())
     }
-    async fn read_register(&mut self, reg: u8) -> Result<u8, Self::Error> {
+    async fn read_register(&mut self, _address: u8, reg: u8) -> Result<u8, Self::Error> {
         Ok(self.registers[reg as usize])
     }
 
-    async fn read_registers(&mut self, reg: u8, data: &mut [u8]) -> Result<(), Self::Error> {
+    async fn read_registers(&mut self, _address: u8, reg: u8, data: &mut [u8]) -> Result<(), Self::Error> {
         let start = reg as usize;
         let end = start + data.len();
 
@@ -66,12 +77,12 @@ impl ImuBus for MockImuBus {
         Ok(())
     }
 
-    async fn write_register(&mut self, reg: u8, data: u8) -> Result<(), Self::Error> {
+    async fn write_register(&mut self, _address: u8, reg: u8, data: u8) -> Result<(), Self::Error> {
         self.registers[reg as usize] = data;
         Ok(())
     }
 
-    async fn write_registers(&mut self, reg: u8, data: &[u8]) -> Result<(), Self::Error> {
+    async fn write_registers(&mut self, _address: u8, reg: u8, data: &[u8]) -> Result<(), Self::Error> {
         let start = reg as usize;
         let end = start + data.len();
 
@@ -110,25 +121,25 @@ impl<'d, T: Instance> ImuBus for I2c<'d, T, Async> {
         //I2c::<'d, T, Async>::write_read(self, address, write, read).await
     }
 
-    async fn read_register(&mut self, reg: u8) -> Result<u8, Self::Error> {
+    async fn read_register(&mut self, address: u8, reg: u8) -> Result<u8, Self::Error> {
         let mut buf = [0u8; 1];
         // Write the register address, read back 1 byte
-        self.bus_write_read(0x68, &[reg], &mut buf).await?;
+        self.bus_write_read(address, &[reg], &mut buf).await?;
         Ok(buf[0])
     }
 
-    async fn read_registers(&mut self, reg: u8, data: &mut [u8]) -> Result<(), Self::Error> {
+    async fn read_registers(&mut self, address: u8, reg: u8, data: &mut [u8]) -> Result<(), Self::Error> {
         // Write the starting register address, read back 'data.len()' bytes
         // The MPU6050 automatically increments the register pointer internally
-        self.bus_write_read(0x68, &[reg], data).await
+        self.bus_write_read(address, &[reg], data).await
     }
 
-    async fn write_register(&mut self, reg: u8, data: u8) -> Result<(), Self::Error> {
+    async fn write_register(&mut self, address: u8, reg: u8, data: u8) -> Result<(), Self::Error> {
         // To write, we send [register, value] and expect 0 bytes back
-        self.bus_write_read(0x68, &[reg, data], &mut []).await
+        self.bus_write_read(address, &[reg, data], &mut []).await
     }
 
-    async fn write_registers(&mut self, reg: u8, data: &[u8]) -> Result<(), Self::Error> {
+    async fn write_registers(&mut self, address: u8, reg: u8, data: &[u8]) -> Result<(), Self::Error> {
         // This is trickier: I2C writes usually need the register and data in one contiguous stream.
         // For no_std, we can use a small local buffer or a loop if the bus supports it.
         // For a simple MPU6050 config, usually we only write 1-2 bytes at a time.
@@ -139,7 +150,7 @@ impl<'d, T: Instance> ImuBus for I2c<'d, T, Async> {
         let len = data.len().min(4);
         buf[1..1 + len].copy_from_slice(&data[..len]);
 
-        self.bus_write_read(0x68, &buf[..1 + len], &mut []).await
+        self.bus_write_read(address, &buf[..1 + len], &mut []).await
     }
 }
 
@@ -195,28 +206,28 @@ impl<'d, T: Instance> ImuBus for SpiBusWrapper<'d, T> {
         res
     }
 
-    async fn read_register(&mut self, reg: u8) -> Result<u8, Self::Error> {
+    async fn read_register(&mut self, address: u8, reg: u8) -> Result<u8, Self::Error> {
         let mut buf = [0u8; 1];
 
         // If SPI is enabled, we need to set the Read Bit (0x80)
         #[cfg(feature = "spi")]
         let reg = reg | 0x80;
 
-        self.bus_write_read(0x68, &[reg], &mut buf).await?;
+        self.bus_write_read(address, &[reg], &mut buf).await?;
         Ok(buf[0])
     }
 
-    async fn read_registers(&mut self, reg: u8, data: &mut [u8]) -> Result<(), Self::Error> {
+    async fn read_registers(&mut self, address: u8, reg: u8, data: &mut [u8]) -> Result<(), Self::Error> {
         // Write the starting register address, read back 'data.len()' bytes
         // The MPU6050 automatically increments the register pointer internally
-        self.bus_write_read(0x68, &[reg], data).await
+        self.bus_write_read(address, &[reg], data).await
     }
 
-    async fn write_register(&mut self, reg: u8, data: u8) -> Result<(), Self::Error> {
+    async fn write_register(&mut self, address: u8, reg: u8, data: u8) -> Result<(), Self::Error> {
         // To write, we send [register, value] and expect 0 bytes back
-        self.bus_write_read(0x68, &[reg, data], &mut []).await
+        self.bus_write_read(address, &[reg, data], &mut []).await
     }
-    async fn write_registers(&mut self, reg: u8, data: &[u8]) -> Result<(), Self::Error> {
+    async fn write_registers(&mut self, address: u8, reg: u8, data: &[u8]) -> Result<(), Self::Error> {
         // For SPI Write, MSB of register must be 0 (reg & 0x7F)
         // We send [reg, data[0], data[1], ...]
 
@@ -265,10 +276,10 @@ mod tests {
         let write_data = [0xAA, 0xBB];
 
         // In a test environment, you'd "await" these
-        pollster::block_on(bus.write_registers(0x10, &write_data)).unwrap();
+        pollster::block_on(bus.write_registers(0, 0x10, &write_data)).unwrap();
 
         let mut read_data = [0u8; 2];
-        pollster::block_on(bus.read_registers(0x10, &mut read_data)).unwrap();
+        pollster::block_on(bus.read_registers(0, 0x10, &mut read_data)).unwrap();
 
         assert_eq!(read_data, [0xAA, 0xBB]);
     }
