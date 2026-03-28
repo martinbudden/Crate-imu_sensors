@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{ImuAxesOrder, ImuBus};
 use vector_quaternion_matrix::{Vector3d, Vector3df32};
 
@@ -11,7 +13,8 @@ pub struct ImuCommon {
     pub acc_scale: f32,
     pub gyro_sample_rate_hz: u32,
     pub acc_sample_rate_hz: u32,
-}
+    pub axis_order: ImuAxesOrder,
+ }
 
 impl ImuCommon {
     pub const GYRO_FULL_SCALE_MAX: u8 = 0;
@@ -30,7 +33,7 @@ impl ImuCommon {
     pub const ACC_FULL_SCALE_16G: u8 = 5;
     pub const ACC_FULL_SCALE_32G: u8 = 6;
 
-    fn new() -> Self {
+    pub fn new(axis_order:ImuAxesOrder) -> Self {
         const GYRO_2000DPS_RES: f32 = 2000.0 / 32768.0;
         const ACC_8G_RES: f32 = 8.0 / 32768.0;
         Self {
@@ -41,24 +44,25 @@ impl ImuCommon {
             acc_scale: ACC_8G_RES,
             gyro_sample_rate_hz: 1000,
             acc_sample_rate_hz: 1000,
-        }
+            axis_order,
+         }
     }
 }
 
 impl Default for ImuCommon {
     fn default() -> Self {
-        Self::new()
+        Self::new(ImuAxesOrder::XPOS_YPOS_ZPOS)
     }
 }
 
 // Imu configuration, set on construction and read-only thereafter
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Deserialize, Serialize)]
 pub struct ImuConfig {
     pub gyro_id_msp: u16,
     pub acc_id_msp: u16,
     pub device_id: u8, // 8-bit id assigned by IMU manufacturer
     pub address: u8,
-    pub axis_order: ImuAxesOrder,
+    pub axis_order: u8,
     pub flags: u8, // Flags for describing IMU characteristics
 }
 
@@ -95,7 +99,7 @@ impl ImuConfig {
             acc_id_msp: 0,
             device_id: 0, // 8-bit id assigned by IMU manufacturer
             address: 0,
-            axis_order: ImuAxesOrder::XPOS_YPOS_ZPOS,
+            axis_order: 0,
             flags: 0, // Flags for describing IMU characteristics
         }
     }
@@ -156,17 +160,17 @@ pub trait Imu {
         self.common_mut().acc_offset = acc_offset;
     }
     fn gyro_offset_mapped(&self) -> Vector3df32 {
-        self.config().axis_order.map_vector(&self.common().gyro_offset)
+        self.common().axis_order.map_vector(&self.common().gyro_offset)
     }
     fn set_gyro_offset_mapped(&mut self, gyro_offset: Vector3df32) {
-        let gyro_offset_mapped = self.config().axis_order.axes_order_inverse().map_vector(&gyro_offset);
+        let gyro_offset_mapped = self.common().axis_order.axes_order_inverse().map_vector(&gyro_offset);
         self.set_gyro_offset(gyro_offset_mapped);
     }
     fn acc_offset_mapped(&self) -> Vector3df32 {
-        self.config().axis_order.map_vector(&self.common().acc_offset)
+        self.common().axis_order.map_vector(&self.common().acc_offset)
     }
     fn set_acc_offset_mapped(&mut self, acc_offset: Vector3df32) {
-        let acc_offset_mapped = self.config().axis_order.axes_order_inverse().map_vector(&acc_offset);
+        let acc_offset_mapped = self.common().axis_order.axes_order_inverse().map_vector(&acc_offset);
         self.set_gyro_offset(acc_offset_mapped);
     }
 }

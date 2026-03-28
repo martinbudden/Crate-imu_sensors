@@ -25,6 +25,7 @@
         "Readingf",
         "REGDATA",
         "rustdoc",
+        "serde",
         "USRH",
         "USRL",
         "XNEG",

@@ -3,11 +3,13 @@ use vector_quaternion_matrix::Vector3df32;
 
 use cfg_if::cfg_if;
 use strum_macros::EnumIter;
+use num_enum::{FromPrimitive,IntoPrimitive};
 
 #[allow(non_camel_case_types)]
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, EnumIter)]
+#[derive(Clone, Copy, Debug, PartialEq, EnumIter,FromPrimitive,IntoPrimitive)]
 pub enum ImuAxesOrder {
+    #[num_enum(default)]
     XPOS_YPOS_ZPOS = 0,
     YPOS_XNEG_ZPOS = 1, // rotate  90 degrees anticlockwise
     XNEG_YNEG_ZPOS = 2, // rotate 180 degrees

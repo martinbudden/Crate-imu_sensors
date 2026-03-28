@@ -176,7 +176,7 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
     {
         let mut buf = [0u8; 6];
         self.write_read(I2C_ADDRESS, &[REG_OUTX_L_ACC], &mut buf).await?;
-        Ok(self.map_gyro_rps(buf, self.config.axis_order))
+        Ok(self.map_gyro_rps(buf, self.common.axis_order))
     }
 
     async fn read_gyro_rps(&mut self) -> Result<Vector3df32, Self::Error>
@@ -186,7 +186,7 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
         let mut buf = [0u8; 6];
         self.write_read(I2C_ADDRESS, &[REG_OUTX_L_G], &mut buf).await?;
         //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
-        Ok(self.map_gyro_rps(buf, self.config.axis_order))
+        Ok(self.map_gyro_rps(buf, self.common.axis_order))
     }
 
     async fn read_acc_gyro_rps(&mut self) -> Result<ImuReadingf32, Self::Error>
@@ -195,7 +195,7 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
     {
         let mut buf = [0u8; 12];
         self.write_read(I2C_ADDRESS, &[REG_OUTX_L_G], &mut buf).await?;
-        Ok(self.map_acc_gyro_rps(buf, self.config.axis_order))
+        Ok(self.map_acc_gyro_rps(buf, self.common.axis_order))
     }
 }
 
@@ -207,11 +207,11 @@ impl<B: ImuBus> Lsm6ds<B> {
     pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
         Self {
             bus,
-            common: ImuCommon::default(),
+            common: ImuCommon::new(axis_order),
             config: ImuConfig {
                 gyro_id_msp: ImuConfig::MSP_GYRO_ID_LSM6DS,
                 acc_id_msp: ImuConfig::MSP_ACC_ID_LSM6DS,
-                axis_order,
+                axis_order: axis_order.into(),
                 device_id: Self::DEVICE_ID,
                 address: I2C_ADDRESS,
                 flags: 0,
