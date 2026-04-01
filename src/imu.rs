@@ -14,7 +14,7 @@ pub struct ImuCommon {
     pub gyro_sample_rate_hz: u32,
     pub acc_sample_rate_hz: u32,
     pub axis_order: ImuAxesOrder,
- }
+}
 
 impl ImuCommon {
     pub const GYRO_FULL_SCALE_MAX: u8 = 0;
@@ -33,7 +33,7 @@ impl ImuCommon {
     pub const ACC_FULL_SCALE_16G: u8 = 5;
     pub const ACC_FULL_SCALE_32G: u8 = 6;
 
-    pub fn new(axis_order:ImuAxesOrder) -> Self {
+    pub fn new(axis_order: ImuAxesOrder) -> Self {
         const GYRO_2000DPS_RES: f32 = 2000.0 / 32768.0;
         const ACC_8G_RES: f32 = 8.0 / 32768.0;
         Self {
@@ -45,7 +45,7 @@ impl ImuCommon {
             gyro_sample_rate_hz: 1000,
             acc_sample_rate_hz: 1000,
             axis_order,
-         }
+        }
     }
 }
 

@@ -2,12 +2,12 @@ use crate::ImuReadingf32;
 use vector_quaternion_matrix::Vector3df32;
 
 use cfg_if::cfg_if;
+use num_enum::{FromPrimitive, IntoPrimitive};
 use strum_macros::EnumIter;
-use num_enum::{FromPrimitive,IntoPrimitive};
 
 #[allow(non_camel_case_types)]
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, EnumIter,FromPrimitive,IntoPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, EnumIter, FromPrimitive, IntoPrimitive)]
 pub enum ImuAxesOrder {
     #[num_enum(default)]
     XPOS_YPOS_ZPOS = 0,
