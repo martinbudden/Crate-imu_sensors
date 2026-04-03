@@ -1,19 +1,5 @@
 # imu_sensors Rust Crate ![license](https://img.shields.io/badge/license-MIT-green) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) ![open source](https://badgen.net/badge/open/source/blue?icon=github)
 
-## Original implementation
-
-This crate was originally implemented as a c++ library. The
-[original implementation can be found here](https://github.com/martinbudden/Library-Sensors).
-
-## License
-
-Licensed under either of
-
-* Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
-* MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT)>
-
-at your option.
-
 ## Aim of Crate
 
 This crate aims to support a variety of IMUs (see below) using both I2C and SPI buses.
@@ -54,3 +40,17 @@ these flight controllers can be repurposed for other projects.
 
 This library uses the [VectorQuaternionMatrix crate](https://github.com/martinbudden/Crate-vector_quaternion_matrix)
 for its `Vector3df32`, `Vector3di32`, and `Quaternion` classes.
+
+## Original implementation
+
+I originally implemented this crate as a C++ library:
+[Library-Sensors](https://github.com/martinbudden/Library-Sensors).
+
+## License
+
+Licensed under either of
+
+* Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+* MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT)>
+
+at your option.
