@@ -164,7 +164,7 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
         &self.config
     }
 
-    async fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
+    async fn write_read(&mut self, _address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
         // On the Pico, I2C write_read is natively async.
         // We just delegate the call and .await the result.
         self.bus.bus_write_read(self.config.device_id, write, read).await
