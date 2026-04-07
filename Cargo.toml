@@ -11,8 +11,13 @@ rustdoc-args = ["--html-in-header", "katex-header.html"]
 
 
 [features]
-#default = ["rp2040", "spi"]
-default = ["rp2040", "i2c"]
+std = ["vector-quaternion-matrix/std"]
+no_align = ["vector-quaternion-matrix/no_align"]
+simd = ["vector-quaternion-matrix/simd"]
+libm = ["vector-quaternion-matrix/libm"]
+
+#default = ["libm", "rp2040", "spi"]
+default = ["libm", "rp2040", "i2c"]
 #rp2040 = ["embassy-rp"]
 rp2040 = ["embassy-rp/rp2040"]
 rp2350 = ["embassy-rp/rp235xa", "embassy-rp/binary-info"] # 'rp235xa' is the 30-GPIO Pico 2 variant
@@ -28,7 +33,12 @@ USE_IMU_LSM6DSOX = []
 LIBRARY_SENSORS_IMU_FIXED_AXES_XPOS_YPOS_ZPOS = []
 LIBRARY_SENSORS_IMU_FIXED_AXES_YNEG_XPOS_ZPOS = []
 
+[build-dependencies]
+rustc_version = "0.4"
+
 [dependencies]
+vector-quaternion-matrix = { git = "https://github.com/martinbudden/crate-vector-quaternion-matrix", default-features = false }
+
 # Use embedded-hal for I2C/SPI traits
 embedded-hal = "1.0.0"
 # Example: Add a specific sensor driver if needed
@@ -60,8 +70,6 @@ embedded-hal-async = "1.0.0"
 log = "0.4"
 
 cfg-if = "1.0"
-
-vector-quaternion-matrix = { git = "https://github.com/martinbudden/crate-vector-quaternion-matrix" }
 
 strum = "0.28.0"
 strum_macros = "0.28.0"
