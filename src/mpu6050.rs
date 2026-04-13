@@ -1,6 +1,6 @@
 //#![allow(unused)]
 
-use vector_quaternion_matrix::{Vector3df32, Vector3di16};
+use vqm::{Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
 
@@ -10,19 +10,19 @@ const _I2C_ADDRESS_ALTERNATIVE: u8 = 0x69;
 // **** IMU Registers and associated bitflags ****
 const _REG_SAMPLE_RATE_DIVIDER: u8 = 0x19;
 const _REG_CONFIG: u8 = 0x1A;
-const _DLPF_CFG_260_HZ: u8 = 0b00000000; // FS = 8kHz only
-const _DLPF_CFG_184_HZ: u8 = 0b00000001;
-const _DLPF_CFG_94_HZ: u8 = 0b00000010;
-const _DLPF_CFG_44_HZ: u8 = 0b00000011;
-const _DLPF_CFG_21_HZ: u8 = 0b00000100;
-const _DLPF_CFG_10_HZ: u8 = 0b00000101;
-const _DLPF_CFG_5_HZ: u8 = 0b00000110;
+const _DLPF_CFG_260_HZ: u8 = 0b0000_0000; // FS = 8kHz only
+const _DLPF_CFG_184_HZ: u8 = 0b0000_0001;
+const _DLPF_CFG_94_HZ: u8 = 0b0000_0010;
+const _DLPF_CFG_44_HZ: u8 = 0b0000_0011;
+const _DLPF_CFG_21_HZ: u8 = 0b0000_0100;
+const _DLPF_CFG_10_HZ: u8 = 0b0000_0101;
+const _DLPF_CFG_5_HZ: u8 = 0b0000_0110;
 
 const _REG_GYRO_CONFIG: u8 = 0x1B;
-const GYRO_RANGE_250_DPS: u8 = 0b00000000;
-const GYRO_RANGE_500_DPS: u8 = 0b00001000;
-const GYRO_RANGE_1000_DPS: u8 = 0b00010000;
-const GYRO_RANGE_2000_DPS: u8 = 0b00011000;
+const GYRO_RANGE_250_DPS: u8 = 0b0000_0000;
+const GYRO_RANGE_500_DPS: u8 = 0b0000_1000;
+const GYRO_RANGE_1000_DPS: u8 = 0b000_10000;
+const GYRO_RANGE_2000_DPS: u8 = 0b0001_1000;
 
 const _REG_ACCEL_CONFIG: u8 = 0x1C;
 const ACCEL_RANGE_2G: u8 = 0b0000_0000;
@@ -31,21 +31,21 @@ const ACCEL_RANGE_8G: u8 = 0b0001_0000;
 const ACCEL_RANGE_16G: u8 = 0b0001_1000;
 
 const REG_INT_PIN_CONFIG: u8 = 0x37;
-const _INT_LEVEL_ACTIVE_LOW: u8 = 0b10000000;
+const _INT_LEVEL_ACTIVE_LOW: u8 = 0b1000_0000;
 const INT_LEVEL_ACTIVE_HIGH: u8 = 0;
-const _INT_OPEN_DRAIN: u8 = 0b01000000;
+const _INT_OPEN_DRAIN: u8 = 0b0100_0000;
 const INT_PUSH_PULL: u8 = 0;
-const _INT_ENABLE_LATCHED: u8 = 0b00100000;
+const _INT_ENABLE_LATCHED: u8 = 0b0010_0000;
 const INT_ENABLE_PULSE: u8 = 0;
-const INT_CLEAR_READ_ANY: u8 = 0b00010000; // cleared on any read
+const INT_CLEAR_READ_ANY: u8 = 0b0001_0000; // cleared on any read
 const _INT_CLEAR_READ_STATUS: u8 = 0; // cleared only by reading REG_INT_STATUS
-const _FSYNCH_ACTIVE_LOW: u8 = 0b00001000; // interrupt on FSYNCH pin active high
+const _FSYNCH_ACTIVE_LOW: u8 = 0b0000_1000; // interrupt on FSYNCH pin active high
 const _FSYNCH_ACTIVE_HIGH: u8 = 0;
-const _FSYNCH_INT_ENABLE: u8 = 0b00000100; // enable interrupt on FSYNCH pin
+const _FSYNCH_INT_ENABLE: u8 = 0b0000_0100; // enable interrupt on FSYNCH pin
 const FSYNCH_INT_DISABLE: u8 = 0;
 
 const REG_INT_ENABLE: u8 = 0x38;
-const DATA_READY_ENABLE: u8 = 0b00000001;
+const DATA_READY_ENABLE: u8 = 0b0000_0001;
 
 const _REG_INT_STATUS: u8 = 0x3A;
 
@@ -83,7 +83,7 @@ const _REG_WHO_AM_I: u8 = 0x75;
 // **** IMU Registers and associated bitflags ****
 
 /// MPU6000 is SPI variant of MPU6050
-/// MPU6000 and MPU6050 are Big Endian
+/// MPU6000 and MPU6050 are Big Endian.
 ///
 pub struct Mpu6050<B: ImuBus> {
     pub bus: B,
@@ -166,10 +166,12 @@ impl<B: ImuBus> Mpu6050<B> {
         }
     }
 
+    /// # Errors
     pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
         self.bus.read_register(self.config.address, reg).await
     }
 
+    /// # Errors
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,

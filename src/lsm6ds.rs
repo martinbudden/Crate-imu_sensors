@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use vector_quaternion_matrix::{Vector3df32, Vector3di16};
+use vqm::{Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
 
@@ -58,11 +58,11 @@ const REG_ALL_INT_SRC: u8 = 0x1A;
 }
 
 const REG_DATA_READY_PULSE_CONFIG: u8 = 0x0B;
-const DATA_READY_PULSED: u8 = 0b10000000;
+const DATA_READY_PULSED: u8 = 0b1000_0000;
 const REG_INT1_CTRL: u8 = 0x0D;
-const INT1_DRDY_G: u8 = 0b00000010;
+const INT1_DRDY_G: u8 = 0b0000_0010;
 const REG_INT2_CTRL: u8 = 0x0E;
-const INT2_DRDY_G: u8 = 0b00000010;
+const INT2_DRDY_G: u8 = 0b0000_0010;
 const _REG_WHO_AM_I: u8 = 0x0F;
 const _REG_WHO_AM_I_RESPONSE_LSM6DS3TR_C: u8 = 0x6A;
 const _REG_WHO_AM_I_RESPONSE_ISM330DHCX: u8 = 0x6B;
@@ -72,16 +72,16 @@ const ACC_RANGE_2G: u8 = 0b0000;
 const ACC_RANGE_4G: u8 = 0b1000;
 const ACC_RANGE_8G: u8 = 0b1100;
 const ACC_RANGE_16G: u8 = 0b0100;
-const ACC_ODR_12P5_HZ: u8 = 0b00010000;
-const ACC_ODR_26_HZ: u8 = 0b00100000;
-const ACC_ODR_52_HZ: u8 = 0b00110000;
-const ACC_ODR_104_HZ: u8 = 0b01000000;
-const ACC_ODR_208_HZ: u8 = 0b01010000; // corrected: was 0b010100000 (9 bits)
-const ACC_ODR_416_HZ: u8 = 0b01100000;
-const ACC_ODR_833_HZ: u8 = 0b01110000;
-const ACC_ODR_1666_HZ: u8 = 0b10000000;
-const ACC_ODR_3332_HZ: u8 = 0b10010000;
-const ACC_ODR_6664_HZ: u8 = 0b10100000;
+const ACC_ODR_12P5_HZ: u8 = 0b0001_0000;
+const ACC_ODR_26_HZ: u8 = 0b0010_0000;
+const ACC_ODR_52_HZ: u8 = 0b0011_0000;
+const ACC_ODR_104_HZ: u8 = 0b0100_0000;
+const ACC_ODR_208_HZ: u8 = 0b0101_0000; // corrected: was 0b010100000 (9 bits)
+const ACC_ODR_416_HZ: u8 = 0b0110_0000;
+const ACC_ODR_833_HZ: u8 = 0b0111_0000;
+const ACC_ODR_1666_HZ: u8 = 0b1000_0000;
+const ACC_ODR_3332_HZ: u8 = 0b1001_0000;
+const ACC_ODR_6664_HZ: u8 = 0b1010_0000;
 const REG_CTRL2_G: u8 = 0x11;
 const GYRO_RANGE_125_DPS: u8 = 0b0010;
 const _GYRO_RANGE_245_DPS: u8 = 0b0000; // LSM6DS3TR_C
@@ -89,26 +89,26 @@ const _GYRO_RANGE_250_DPS: u8 = 0b0000; // ISM330DHCX, LSM6DSOX
 const GYRO_RANGE_500_DPS: u8 = 0b0100;
 const GYRO_RANGE_1000_DPS: u8 = 0b1000;
 const GYRO_RANGE_2000_DPS: u8 = 0b1100;
-const GYRO_ODR_12P5_HZ: u8 = 0b00010000;
-const GYRO_ODR_26_HZ: u8 = 0b00100000;
-const GYRO_ODR_52_HZ: u8 = 0b00110000;
-const GYRO_ODR_104_HZ: u8 = 0b01000000;
-const GYRO_ODR_208_HZ: u8 = 0b01010000; // corrected: was 0b010100000 (9 bits)
-const GYRO_ODR_416_HZ: u8 = 0b01100000;
-const GYRO_ODR_833_HZ: u8 = 0b01110000;
-const GYRO_ODR_1666_HZ: u8 = 0b10000000;
-const GYRO_ODR_3332_HZ: u8 = 0b10010000;
-const GYRO_ODR_6664_HZ: u8 = 0b10100000;
+const GYRO_ODR_12P5_HZ: u8 = 0b0001_0000;
+const GYRO_ODR_26_HZ: u8 = 0b0010_0000;
+const GYRO_ODR_52_HZ: u8 = 0b0011_0000;
+const GYRO_ODR_104_HZ: u8 = 0b0100_0000;
+const GYRO_ODR_208_HZ: u8 = 0b0101_0000; // corrected: was 0b010100000 (9 bits)
+const GYRO_ODR_416_HZ: u8 = 0b0110_0000;
+const GYRO_ODR_833_HZ: u8 = 0b0111_0000;
+const GYRO_ODR_1666_HZ: u8 = 0b1000_0000;
+const GYRO_ODR_3332_HZ: u8 = 0b1001_0000;
+const GYRO_ODR_6664_HZ: u8 = 0b1010_0000;
 const REG_CTRL3_C: u8 = 0x12;
-const BDU: u8 = 0b01000000;
-const IF_INC: u8 = 0b00000100;
-const SW_RESET: u8 = 0b00000001;
+const BDU: u8 = 0b0100_0000;
+const IF_INC: u8 = 0b0000_0100;
+const SW_RESET: u8 = 0b0000_0001;
 const _REG_CTRL4_C: u8 = 0x13;
-const _I2C_DISABLE: u8 = 0b00000100;
-const _LPF1_SEL_G: u8 = 0b00000010;
+const _I2C_DISABLE: u8 = 0b0000_0100;
+const _LPF1_SEL_G: u8 = 0b0000_0010;
 const _REG_CTRL5_C: u8 = 0x14;
 const _REG_CTRL6_C: u8 = 0x15;
-const _XL_HM_MODE_DISABLE: u8 = 0b00010000;
+const _XL_HM_MODE_DISABLE: u8 = 0b0001_0000;
 const _LPF1_MEDIUM_HI: u8 = 0x00;
 const _LPF1_MEDIUM_LO: u8 = 0x01;
 const _LPF1_LO: u8 = 0x02;
@@ -223,6 +223,8 @@ impl<B: ImuBus> Lsm6ds<B> {
         self.bus.read_register(self.config.address, reg).await
     }
 
+    /// # Errors
+    #[allow(clippy::too_many_lines)]
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
@@ -406,6 +408,7 @@ mod tests {
     use crate::{ImuAxesOrder, MockImuBus};
 
     fn is_normal<T: Sized + Send + Sync + Unpin>() {}
+    fn is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
 
     #[test]
     fn normal_types() {
@@ -430,7 +433,9 @@ mod tests {
         let reg = pollster::block_on(imu.read_register(REG_DATA_READY_PULSE_CONFIG));
         assert_eq!(DATA_READY_PULSED, reg.unwrap());
 
+        #[allow(clippy::float_cmp)]
         assert_eq!(2000.0 / 32768.0, imu.common.gyro_scale_dps);
+        #[allow(clippy::float_cmp)]
         assert_eq!(16.0 / 32768.0, imu.common.acc_scale);
         assert_eq!(6664, imu.common.gyro_sample_rate_hz);
         assert_eq!(6664, imu.common.acc_sample_rate_hz);

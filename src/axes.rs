@@ -1,5 +1,5 @@
 use crate::ImuReadingf32;
-use vector_quaternion_matrix::Vector3df32;
+use vqm::Vector3df32;
 
 use cfg_if::cfg_if;
 use num_enum::{FromPrimitive, IntoPrimitive};
@@ -111,6 +111,8 @@ impl ImuAxesOrder {
             }
         }
     }
+
+    #[allow(clippy::too_many_lines)]
     pub fn map_reading(self, data: &ImuReadingf32) -> ImuReadingf32 {
         // use a feature flag to hardcode the mapping, so that the match statement can be bypassed for optimal performance.
         cfg_if! {

@@ -91,25 +91,8 @@ impl ImuBus for MockImuBus {
     }
 }
 
-/*
-// Bridge the Pico's actual I2c implementation to your custom ImuBus trait
-impl<'d, T: embassy_rp::i2c::Instance> ImuBus for I2c<'d, T, Async> {
-    type Error = embassy_rp::i2c::Error;
-
-    async fn write_read(
-        &mut self,
-        address: u8,
-        write: &[u8],
-        read: &mut [u8]
-    ) -> Result<(), Self::Error>
-    {
-        // This calls the real Embassy HAL method
-        self.write_read(address, write, read).await
-    }
-}*/
-
 #[cfg(all(feature = "rp2040", feature = "i2c"))]
-impl<'d, T: Instance> ImuBus for I2c<'d, T, Async> {
+impl<T: Instance> ImuBus for I2c<'_, T, Async> {
     type Error = embassy_rp::i2c::Error;
     async fn bus_write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
         // On the Pico, I2C write_read is natively async.
@@ -148,9 +131,9 @@ impl<'d, T: Instance> ImuBus for I2c<'d, T, Async> {
         let mut buf = [0u8; 5];
         buf[0] = reg;
         let len = data.len().min(4);
-        buf[1..1 + len].copy_from_slice(&data[..len]);
+        buf[1..=len].copy_from_slice(&data[..len]);
 
-        self.bus_write_read(address, &buf[..1 + len], &mut []).await
+        self.bus_write_read(address, &buf[..=len], &mut []).await
     }
 }
 
@@ -245,9 +228,9 @@ impl<'d, T: Instance> ImuBus for SpiBusWrapper<'d, T> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SetupError<E> {
-    /// An error occurred with the I2C/SPI bus during setup
+    /// An error occurred with the I2C/SPI bus during setup.
     Bus(E),
-    /// An incorrect 'Who Am I' value was returned from the IMU
+    /// An incorrect 'Who Am I' value was returned from the IMU.
     ImuWhoAmI(u8),
 }
 

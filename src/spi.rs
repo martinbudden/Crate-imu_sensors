@@ -21,14 +21,14 @@ where
 {
     pub async fn read_register(&mut self, reg: u8) -> Result<u8, SPI::Error> {
         // 1. Select the device (Pull CS LOW)
-        self.cs.set_low().ok();
+        _ = self.cs.set_low().ok();
 
         // 2. Perform SPI Transfer (e.g., Read command 0x80 | reg)
         let mut data = [reg | 0x80, 0];
         self.spi.transfer_in_place(&mut data).await?;
 
         // 3. Deselect the device (Pull CS HIGH)
-        self.cs.set_high().ok();
+        _ = self.cs.set_high().ok();
 
         Ok(data[1])
     }

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{ImuAxesOrder, ImuBus};
-use vector_quaternion_matrix::{Vector3d, Vector3df32};
+use vqm::{Vector3d, Vector3df32};
 
 // Shared data members
 #[derive(Clone, Copy, Debug, PartialEq)]

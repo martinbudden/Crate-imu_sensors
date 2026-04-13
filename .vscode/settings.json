@@ -29,6 +29,7 @@
         "hashbrown",
         "heapless",
         "indexmap",
+        "Invensense",
         "itertools",
         "katex",
         "lalrpop",

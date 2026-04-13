@@ -4,6 +4,13 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![deny(unused_must_use)]
+#![warn(unused_results)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::doc_paragraphs_missing_punctuation)]
+#![allow(clippy::inline_always)]
+#![allow(clippy::return_self_not_must_use)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::doc_markdown)]
 
 #[cfg(all(feature = "i2c", feature = "spi"))]
 compile_error!("Features 'i2c' and 'spi' are mutually exclusive and cannot be enabled together.");
@@ -25,9 +32,3 @@ pub use lsm6ds::Lsm6ds;
 pub use mpu6050::Mpu6050;
 pub use mpu6886::Mpu6886;
 pub use spi::SpiInterface;
-
-/*
-In main:
-let cs_pin = Output::new(p.PIN_1.into(), Level::High); // .into() converts to AnyPin
-let wrapper = SpiBusWrapper { spi, cs: cs_pin };
-*/

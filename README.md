@@ -1,4 +1,8 @@
-# imu_sensors Rust Crate ![license](https://img.shields.io/badge/license-MIT-green) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) ![open source](https://badgen.net/badge/open/source/blue?icon=github)
+# `imu_sensors` Rust Crate ![license](https://img.shields.io/badge/license-MIT-green) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) ![open source](https://badgen.net/badge/open/source/blue?icon=github)
+
+## WORK IN PROGRESS
+
+**THIS CRATE IS A WORK IN PROGRESS AND NOT YET READY FOR USE.**
 
 ## Aim of Crate
 
@@ -6,11 +10,9 @@ This crate aims to support a variety of IMUs (see below) using both I2C and SPI 
 
 It aims to support a variety of platforms including Raspberry Pi Pico, STM32, and ESP32.
 
-I am learning rust as I do this port. So constructive criticism, bug reports, and pull requests are welcome.
-
 ## IMUs
 
-The aim is to eventually support the following IMUs on both I2C and SPI
+The aim is to eventually support the following IMUs on both I2C and SPI.
 
 | IMU                                                                                        | ID          | SPI      | I2C      |
 | -------------------------------------------------------------------------------------------| ----------- | ---------| -------- |
@@ -29,7 +31,7 @@ The ICM-42605 and ICM-42688 are broadly compatible and share the same driver.
 
 The LSM6DS3TR-C, ISM330DHCX, and LSM6DSOX are broadly compatible and share the same driver.
 
-The MPU-6886 is an IMU that is used by M5Stack devices, it does not seem to be used anywhere else.
+The MPU-6886 is an IMU that is used by M5 Stack devices, it does not seem to be used anywhere else.
 
 The BNO085 is interesting because it performs sensor fusion.
 
@@ -38,7 +40,7 @@ these flight controllers can be repurposed for other projects.
 
 ## Dependencies
 
-This library uses the [VectorQuaternionMatrix crate](https://github.com/martinbudden/Crate-vector_quaternion_matrix)
+This library uses the [vqm(vector quaternion matrix) crate](https://github.com/martinbudden/crate-vector_quaternion_matrix)
 for its `Vector3df32`, `Vector3di32`, and `Quaternion` classes.
 
 ## Original implementation
