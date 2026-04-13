@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use vqm::{Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
@@ -67,7 +65,7 @@ const _REG_WHO_AM_I: u8 = 0x0F;
 const _REG_WHO_AM_I_RESPONSE_LSM6DS3TR_C: u8 = 0x6A;
 const _REG_WHO_AM_I_RESPONSE_ISM330DHCX: u8 = 0x6B;
 const _REG_WHO_AM_I_RESPONSE_LSM6DSOX: u8 = 0x6C;
-const _REG_CTRL1_XL: u8 = 0x10;
+const REG_CTRL1_XL: u8 = 0x10;
 const ACC_RANGE_2G: u8 = 0b0000;
 const ACC_RANGE_4G: u8 = 0b1000;
 const ACC_RANGE_8G: u8 = 0b1100;
@@ -219,6 +217,7 @@ impl<B: ImuBus> Lsm6ds<B> {
         }
     }
 
+    #[allow(dead_code)]
     async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
         self.bus.read_register(self.config.address, reg).await
     }
@@ -230,7 +229,7 @@ impl<B: ImuBus> Lsm6ds<B> {
         target_output_data_rate_hz: u32,
         gyro_sensitivity: u8,
         acc_sensitivity: u8,
-    ) -> Result<(u8, u8), B::Error> {
+    ) -> Result<(u32, u32), B::Error> {
         //if (chip_id != REG_WHO_AM_I_RESPONSE_LSM6DS3TR_C && chip_id != REG_WHO_AM_I_RESPONSE_ISM330DHCX && chip_id != REG_WHO_AM_I_RESPONSE_LSM6DSOX) {
         // software reset
         self.bus.write_register(self.config.address, REG_CTRL3_C, SW_RESET).await?;
@@ -249,6 +248,17 @@ impl<B: ImuBus> Lsm6ds<B> {
         self.bus.write_register(self.config.address, REG_CTRL3_C, BDU | IF_INC).await?; // Block Data Update and automatically increment registers when read via serial interface (I2C or SPI)
         delay_ms(1);
 
+        let gyro_register_value = self.calculate_gyro_odr(target_output_data_rate_hz, gyro_sensitivity);
+        self.bus.write_register(self.config.address, REG_CTRL2_G, gyro_register_value).await?;
+
+        let acc_register_value = self.calculate_acc_odr(target_output_data_rate_hz, acc_sensitivity);
+        self.bus.write_register(self.config.address, REG_CTRL1_XL, acc_register_value).await?;
+
+        // return the gyro and acc sample rates actually set
+        Ok((self.common.gyro_sample_rate_hz, self.common.acc_sample_rate_hz))
+    }
+
+    pub fn calculate_gyro_odr(&mut self, target_output_data_rate_hz: u32, gyro_sensitivity: u8) -> u8 {
         let gyro_odr = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 3332 {
             GYRO_ODR_6664_HZ
         } else if target_output_data_rate_hz > 1666 {
@@ -270,7 +280,6 @@ impl<B: ImuBus> Lsm6ds<B> {
         } else {
             GYRO_ODR_12P5_HZ
         };
-
         self.common.gyro_sample_rate_hz = match gyro_odr {
             GYRO_ODR_6664_HZ => 6664,
             GYRO_ODR_3332_HZ => 3332,
@@ -283,7 +292,6 @@ impl<B: ImuBus> Lsm6ds<B> {
             GYRO_ODR_26_HZ => 26,
             _ => 12,
         };
-
         let gyro_register_value: u8;
         match gyro_sensitivity {
             ImuCommon::GYRO_FULL_SCALE_125_DPS | ImuCommon::GYRO_FULL_SCALE_250_DPS => {
@@ -304,8 +312,10 @@ impl<B: ImuBus> Lsm6ds<B> {
                 gyro_register_value = GYRO_RANGE_2000_DPS | gyro_odr;
             }
         }
-        self.bus.write_register(self.config.address, REG_CTRL2_G, gyro_register_value).await?;
+        gyro_register_value
+    }
 
+    pub fn calculate_acc_odr(&mut self, target_output_data_rate_hz: u32, acc_sensitivity: u8) -> u8 {
         let acc_odr = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 3332 {
             ACC_ODR_6664_HZ
         } else if target_output_data_rate_hz > 1666 {
@@ -327,7 +337,6 @@ impl<B: ImuBus> Lsm6ds<B> {
         } else {
             ACC_ODR_12P5_HZ
         };
-
         self.common.acc_sample_rate_hz = match acc_odr {
             ACC_ODR_6664_HZ => 6664,
             ACC_ODR_3332_HZ => 3332,
@@ -360,7 +369,7 @@ impl<B: ImuBus> Lsm6ds<B> {
                 acc_register_value = ACC_RANGE_16G | acc_odr;
             }
         }
-        Ok((gyro_register_value, acc_register_value))
+        acc_register_value
     }
 
     pub fn map_acc(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
@@ -404,10 +413,12 @@ impl<B: ImuBus> Lsm6ds<B> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
     use super::*;
     use crate::{ImuAxesOrder, MockImuBus};
 
     fn is_normal<T: Sized + Send + Sync + Unpin>() {}
+    #[allow(unused)]
     fn is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
 
     #[test]
@@ -422,10 +433,10 @@ mod tests {
         let mut imu: Lsm6ds<MockImuBus> = Lsm6ds::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         let result = pollster::block_on(imu.init(8000, ImuCommon::GYRO_FULL_SCALE_MAX, ImuCommon::ACC_FULL_SCALE_MAX));
-        let (gyro_register_value, acc_register_value) = result.unwrap();
+        let (gyro_odr, acc_odr) = result.unwrap();
 
-        assert_eq!(172, gyro_register_value);
-        assert_eq!(164, acc_register_value);
+        assert_eq!(6664, gyro_odr);
+        assert_eq!(6664, acc_odr);
 
         let reg = pollster::block_on(imu.read_register(REG_CTRL3_C));
         assert_eq!(BDU | IF_INC, reg.unwrap());
@@ -433,9 +444,7 @@ mod tests {
         let reg = pollster::block_on(imu.read_register(REG_DATA_READY_PULSE_CONFIG));
         assert_eq!(DATA_READY_PULSED, reg.unwrap());
 
-        #[allow(clippy::float_cmp)]
         assert_eq!(2000.0 / 32768.0, imu.common.gyro_scale_dps);
-        #[allow(clippy::float_cmp)]
         assert_eq!(16.0 / 32768.0, imu.common.acc_scale);
         assert_eq!(6664, imu.common.gyro_sample_rate_hz);
         assert_eq!(6664, imu.common.acc_sample_rate_hz);

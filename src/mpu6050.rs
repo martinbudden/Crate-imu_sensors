@@ -1,5 +1,3 @@
-//#![allow(unused)]
-
 use vqm::{Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
@@ -345,6 +343,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
     use super::*;
     use crate::{ImuAxesOrder, MockImuBus};
 

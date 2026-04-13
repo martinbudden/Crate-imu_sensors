@@ -1,5 +1,3 @@
-//#![allow(unused)]
-
 use vqm::{Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
@@ -177,7 +175,7 @@ impl<B: ImuBus> Mpu6886<B> {
         _target_output_data_rate_hz: u32,
         _gyro_sensitivity: u8,
         _acc_sensitivity: u8,
-    ) -> Result<(u8, u8), B::Error> {
+    ) -> Result<(u32, u32), B::Error> {
         let _chip_id = self.bus.read_register(self.config.address, REG_WHO_AM_I).await;
         delay_ms(1);
 
@@ -238,7 +236,7 @@ impl<B: ImuBus> Mpu6886<B> {
         delay_ms(1);
 
         // M5 Unified settings
-        //self.bus.write_register(self.config.address, REG_INT_PIN_CFG, 0b11000000).await; // Active low, open drain 50us pulse width, clear on read
+        //self.bus.write_register(self.config.address, REG_INT_PIN_CFG, 0b1100_0000).await; // Active low, open drain 50us pulse width, clear on read
         self.bus.write_register(self.config.address, REG_INT_PIN_CFG, 0x22).await?;
         delay_ms(1);
 
