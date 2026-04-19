@@ -18,8 +18,8 @@ compile_error!("Features 'i2c' and 'spi' are mutually exclusive and cannot be en
 mod axes;
 mod i2c;
 mod imu;
-mod imu_bus;
 mod imu426xx;
+mod imu_bus;
 mod lsm6ds;
 mod mpu6050;
 mod mpu6886;

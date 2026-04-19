@@ -24,6 +24,7 @@
         "datasheet",
         "debuginfo",
         "defmt",
+        "DELT",
         "DELTSQR",
         "DHCX",
         "DLPF",

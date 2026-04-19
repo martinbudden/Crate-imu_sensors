@@ -46,7 +46,8 @@ LIBRARY_SENSORS_IMU_FIXED_AXES_YNEG_XPOS_ZPOS = []
 rustc_version = "0.4.1"
 
 [dependencies]
-vqm = { version = "0.1.0", default-features = false }
+#vqm = { version = "0.1.0", default-features = false }
+vqm = { git = "https://github.com/martinbudden/crate-vector-quaternion-matrix" }
 
 # Use embedded-hal for I2C/SPI traits
 embedded-hal = "1.0.0"

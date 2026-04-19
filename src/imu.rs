@@ -174,3 +174,31 @@ pub trait Imu {
         self.set_gyro_offset(acc_offset_mapped);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::float_cmp)]
+    #![allow(unused_results)]
+
+    #[allow(unused)]
+    use super::*;
+
+    #[allow(unused)]
+    fn is_normal<T: Sized + Send + Sync + Unpin>() {}
+    fn is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
+    fn is_config<
+        T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq + Serialize + for<'a> Deserialize<'a>,
+    >() {
+    }
+
+    #[test]
+    fn normal_types() {
+        is_full::<ImuCommon>();
+        is_config::<ImuConfig>();
+    }
+    #[test]
+    fn new() {
+        let config = ImuConfig::new();
+        assert_eq!(0, config.address);
+    }
+}
