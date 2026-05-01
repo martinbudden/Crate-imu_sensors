@@ -1,4 +1,5 @@
 #![allow(unused)]
+use core::f32::consts::PI;
 use vqm::{Vector3d, Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
@@ -159,20 +160,20 @@ impl<B: ImuBus> ImuMock<B> {
         }
         match gyro_sensitivity {
             ImuCommon::GYRO_FULL_SCALE_125_DPS => {
-                self.common.gyro_scale_rps = (125.0 / 32768.0_f32).to_radians();
+                self.common.gyro_scale_rps = (125.0 * PI) / (32768.0 * 180.0);
             }
             ImuCommon::GYRO_FULL_SCALE_250_DPS => {
-                self.common.gyro_scale_rps = (250.0 / 32768.0_f32).to_radians();
+                self.common.gyro_scale_rps = (250.0 * PI) / (32768.0 * 180.0);
             }
             ImuCommon::GYRO_FULL_SCALE_500_DPS => {
-                self.common.gyro_scale_rps = (500.0 / 32768.0_f32).to_radians();
+                self.common.gyro_scale_rps = (500.0 * PI) / (32768.0 * 180.0);
             }
             ImuCommon::GYRO_FULL_SCALE_1000_DPS => {
-                self.common.gyro_scale_rps = (1000.0 / 32768.0_f32).to_radians();
+                self.common.gyro_scale_rps = (1000.0 * PI) / (32768.0 * 180.0);
             }
             _ => {
                 // default includes ImuCommon::GYRO_FULL_SCALE_2000_DPS
-                self.common.gyro_scale_rps = (2000.0 / 32768.0_f32).to_radians();
+                self.common.gyro_scale_rps = (2000.0 * PI) / (32768.0 * 180.0);
             }
         }
         Ok((0, 0))

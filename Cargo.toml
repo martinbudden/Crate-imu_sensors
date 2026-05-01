@@ -93,9 +93,8 @@ cfg-if = "1.0.4"
 
 strum = "0.28.0"
 strum_macros = "0.28.0"
-
 # For easy flash access on the RP2040
-embedded-storage = "0.3.1"
+#embedded-storage = "0.3.1"
 serde = { version = "1.0.228", default-features = false, features = ["derive"] }
 postcard = { version = "1.1.3", features = ["embedded-io"] }
 num_enum = "0.7.6"

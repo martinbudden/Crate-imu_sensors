@@ -1,3 +1,4 @@
+use core::f32::consts::PI;
 use vqm::{Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
@@ -200,7 +201,7 @@ impl<B: ImuBus> Mpu6886<B> {
             const GFS_2000DPS: u8 = 3;
             const GYRO_FCHOICE_B: u8 = 0x00; // enables gyro update rate and filter configuration using REG_CONFIG
             self.bus.write_register(self.config.address, REG_GYRO_CONFIG, (GFS_2000DPS << 3) | GYRO_FCHOICE_B).await?;
-            self.common.gyro_scale_rps = (2000.0 / 32768.0_f32).to_radians();
+            self.common.gyro_scale_rps = (2000.0 * PI) / (32768.0 * 180.0);
             self.common.gyro_scale_rps = self.common.gyro_scale_rps.to_radians();
             delay_ms(1);
         }
