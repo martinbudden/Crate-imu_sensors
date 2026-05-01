@@ -20,34 +20,47 @@ rustdoc-args = ["--html-in-header", "katex-header.html"]
 
 
 [features]
-std = ["vqm/std"]
-no_align = ["vqm/no_align"]
-simd = ["vqm/simd"]
-libm = ["vqm/libm"]
 
 #default = ["libm", "rp2040", "spi"]
-default = ["libm", "rp2040", "i2c"]
+default = ["rp2040", "i2c"]
 #rp2040 = ["embassy-rp"]
 rp2040 = ["embassy-rp/rp2040"]
 rp2350 = ["embassy-rp/rp235xa", "embassy-rp/binary-info"] # 'rp235xa' is the 30-GPIO Pico 2 variant
 embassy-rp = ["dep:embassy-rp"]
-# stm32 = ["embassy-stm32"]
+embassy-stm32 = ["dep:embassy-stm32"]
 # esp32 = ["esp-hal", "esp-hal-embassy", "esp-backtrace", "esp-println"]
 i2c = []
 spi = []
-# NOTE: feature names taken directly from C++ library #defines, need to ascertain the Rust naming convention
-USE_IMU_LSMDS63TR_C = []
-USE_IMU_ISM330DHCX = []
-USE_IMU_LSM6DSOX = []
-LIBRARY_SENSORS_IMU_FIXED_AXES_XPOS_YPOS_ZPOS = []
-LIBRARY_SENSORS_IMU_FIXED_AXES_YNEG_XPOS_ZPOS = []
+lsmds63tr_c = []
+ism330dhcx = []
+lsm6dsox = []
+axes_xpos_ypos_zpos = []
+axes_yneg_xpos_zpos = []
 
 [build-dependencies]
 rustc_version = "0.4.1"
 
+# Hardware-specific Embassy HAL (example for Raspberry Pi RP2040)
+# embassy-rp = { version = "0.10.0", optional= true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl"] }
+# embassy-stm32 = { version = "0.5.0", optional = true, features = ["stm32f4xx", "time-driver"] } 
+
+
+[dependencies.embassy-rp]
+optional = true
+version = "0.10.0"
+features = ["time-driver", "critical-section-impl"]
+
+[dependencies.embassy-stm32]
+optional = true
+version = "0.6.0"
+
+[dependencies.esp-idf-hal]
+optional=true
+version = "0.46.2"
+
 [dependencies]
-#vqm = { version = "0.1.0", default-features = false }
-vqm = { git = "https://github.com/martinbudden/crate-vector-quaternion-matrix" }
+vqm = { version = "0.1.1" }
+#vqm = { git = "https://github.com/martinbudden/crate-vector-quaternion-matrix" }
 
 # Use embedded-hal for I2C/SPI traits
 embedded-hal = "1.0.0"
@@ -62,9 +75,6 @@ embassy-executor = { version = "0.10.0", features = ["executor-thread"] }
 embassy-sync = "0.8.0"
 embassy-time = "0.5.1"
 
-# Hardware-specific Embassy HAL (example for Raspberry Pi RP2040)
-embassy-rp = { version = "0.10.0", optional= true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl"] }# embassy-stm32 = { version = "0.5.0", optional = true, features = ["stm32f4xx", "time-driver"] } 
-# embassy-stm32 = { version = "0.5.0", optional = true, features = ["stm32f4xx", "time-driver"] } 
 
 # For logging and panic handling
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
@@ -92,6 +102,7 @@ num_enum = "0.7.6"
 
 [dev-dependencies]
 pollster = "0.4.0"
+approx = "0.5.1"
 
 # see https://doc.rust-lang.org/cargo/reference/profiles.html
 [profile.dev]

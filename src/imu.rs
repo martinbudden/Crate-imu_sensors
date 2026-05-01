@@ -7,7 +7,7 @@ use vqm::{Vector3d, Vector3df32};
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ImuCommon {
     pub acc_offset: Vector3df32,
-    pub gyro_offset: Vector3df32,
+    pub gyro_offset_rps: Vector3df32,
     pub gyro_scale_rps: f32,
     pub gyro_scale_dps: f32,
     pub acc_scale: f32,
@@ -38,7 +38,7 @@ impl ImuCommon {
         const ACC_8G_RES: f32 = 8.0 / 32768.0;
         Self {
             acc_offset: Vector3df32::default(),
-            gyro_offset: Vector3df32::default(),
+            gyro_offset_rps: Vector3df32::default(),
             gyro_scale_dps: GYRO_2000DPS_RES,
             gyro_scale_rps: GYRO_2000DPS_RES.to_radians(),
             acc_scale: ACC_8G_RES,
@@ -148,10 +148,10 @@ pub trait Imu {
     async fn read_acc_gyro_rps(&mut self) -> Result<ImuReadingf32, Self::Error>;
 
     fn gyro_offset(&self) -> Vector3df32 {
-        self.common().gyro_offset
+        self.common().gyro_offset_rps
     }
     fn set_gyro_offset(&mut self, gyro_offset: Vector3df32) {
-        self.common_mut().gyro_offset = gyro_offset;
+        self.common_mut().gyro_offset_rps = gyro_offset;
     }
     fn acc_offset(&self) -> Vector3df32 {
         self.common().acc_offset
@@ -160,7 +160,7 @@ pub trait Imu {
         self.common_mut().acc_offset = acc_offset;
     }
     fn gyro_offset_mapped(&self) -> Vector3df32 {
-        self.common().axis_order.map_vector(&self.common().gyro_offset)
+        self.common().axis_order.map_vector(&self.common().gyro_offset_rps)
     }
     fn set_gyro_offset_mapped(&mut self, gyro_offset: Vector3df32) {
         let gyro_offset_mapped = self.common().axis_order.axes_order_inverse().map_vector(&gyro_offset);

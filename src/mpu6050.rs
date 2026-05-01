@@ -224,20 +224,20 @@ impl<B: ImuBus> Mpu6050<B> {
         };
         let gyro_range = match gyro_sensitivity {
             ImuCommon::GYRO_FULL_SCALE_125_DPS | ImuCommon::GYRO_FULL_SCALE_250_DPS => {
-                self.common.gyro_scale_dps = 250.0 / 32768.0;
+                self.common.gyro_scale_rps = (250.0 / 32768.0_f32).to_radians();
                 GYRO_RANGE_250_DPS
             }
             ImuCommon::GYRO_FULL_SCALE_500_DPS => {
-                self.common.gyro_scale_dps = 500.0 / 32768.0;
+                self.common.gyro_scale_rps = (500.0 / 32768.0_f32).to_radians();
                 GYRO_RANGE_500_DPS
             }
             ImuCommon::GYRO_FULL_SCALE_1000_DPS => {
-                self.common.gyro_scale_dps = 1000.0 / 32768.0;
+                self.common.gyro_scale_rps = (1000.0 / 32768.0_f32).to_radians();
                 GYRO_RANGE_1000_DPS
             }
             _ => {
                 // default includes ImuCommon::GYRO_FULL_SCALE_2000_DPS
-                self.common.gyro_scale_dps = 2000.0 / 32768.0;
+                self.common.gyro_scale_rps = (2000.0 / 32768.0_f32).to_radians();
                 GYRO_RANGE_2000_DPS
             }
         };
@@ -267,7 +267,7 @@ impl<B: ImuBus> Mpu6050<B> {
     // NOTE: Not sure if this is the right place to put this code, but it "wanted" to go here.
     // It just kept floating upward until it reached this point.
     // And it makes it easily accessible from test code.
-    pub fn map_acc(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+    pub fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let acc16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
             y: i16::from_be_bytes([buf[2], buf[3]]),
@@ -276,17 +276,17 @@ impl<B: ImuBus> Mpu6050<B> {
         let acc = Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset;
         ImuAxesOrder::map_vector(axis_order, &acc)
     }
-    pub fn map_gyro_rps(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+    pub fn map_gyro_rps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let gyro16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
             y: i16::from_be_bytes([buf[2], buf[3]]),
             z: i16::from_be_bytes([buf[4], buf[5]]),
         };
-        let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset;
+        let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
         ImuAxesOrder::map_vector(axis_order, &gyro_rps)
     }
 
-    pub fn map_acc_gyro_rps(&mut self, buf: [u8; 14], axis_order: ImuAxesOrder) -> ImuReadingf32 {
+    pub fn map_acc_gyro_rps(&self, buf: [u8; 14], axis_order: ImuAxesOrder) -> ImuReadingf32 {
         let acc16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
             y: i16::from_be_bytes([buf[2], buf[3]]),
@@ -300,7 +300,7 @@ impl<B: ImuBus> Mpu6050<B> {
         };
         let imu_reading = ImuReadingf32 {
             acc: Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset,
-            gyro_rps: Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset,
+            gyro_rps: Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps,
         };
         // NOTE: this begs to be chained, but perhaps for another day
         ImuAxesOrder::map_reading(axis_order, &imu_reading)

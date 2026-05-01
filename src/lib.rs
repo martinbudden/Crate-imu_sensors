@@ -20,6 +20,7 @@ mod i2c;
 mod imu;
 mod imu426xx;
 mod imu_bus;
+mod imu_mock;
 mod lsm6ds;
 mod mpu6050;
 mod mpu6886;

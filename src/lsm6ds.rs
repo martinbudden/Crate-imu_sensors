@@ -13,7 +13,7 @@ const _REG_FUNC_CFG_ACCESS: u8 = 0x01;
 const _REG_RESERVED_03: u8 = 0x03;
 
 cfg_if! {
-if #[cfg(feature = "USE_IMU_LSMDS63TR_C")] {
+if #[cfg(feature = "lsmds63tr_c")] {
 const REG_RESERVED_02: u8 = 0x02;
 const REG_SENSOR_SYNC_TIME_FRAME: u8 = 0x04;
 const REG_SENSOR_SYNC_RES_RATIO: u8 = 0x05;
@@ -26,7 +26,7 @@ const REG_DRDY_PULSE_CFG_G: u8 = 0x0B;
 const REG_RESERVED_0C: u8 = 0x0C;
 const REG_MASTER_CONFIG: u8 = 0x1A;
 
-} else if #[cfg(feature = "USE_IMU_ISM330DHCX")] {
+} else if #[cfg(feature = "ism330dhcx")] {
 
 const REG_PIN_CTRL: u8 = 0x02;
 const REG_RESERVED_04: u8 = 0x04;
@@ -40,7 +40,7 @@ const REG_COUNTER_BDR_REG1: u8 = 0x0B;
 const REG_COUNTER_BDR_REG2: u8 = 0x0C;
 const REG_ALL_INT_SRC: u8 = 0x1A;
 
-} else if #[cfg(feature = "USE_IMU_LSM6DSOX")] {
+} else if #[cfg(feature = "lsm6dsox")] {
 const REG_PIN_CTRL: u8 = 0x02;
 const REG_S4S_TPH_L: u8 = 0x04;
 const REG_S4S_TPH_H: u8 = 0x05;
@@ -299,16 +299,16 @@ impl<B: ImuBus> Lsm6ds<B> {
                 gyro_register_value = GYRO_RANGE_125_DPS | gyro_odr;
             }
             ImuCommon::GYRO_FULL_SCALE_500_DPS => {
-                self.common.gyro_scale_dps = 500.0 / 32768.0;
+                self.common.gyro_scale_rps = (500.0 / 32768.0_f32).to_radians();
                 gyro_register_value = GYRO_RANGE_500_DPS | gyro_odr;
             }
             ImuCommon::GYRO_FULL_SCALE_1000_DPS => {
-                self.common.gyro_scale_dps = 1000.0 / 32768.0;
+                self.common.gyro_scale_rps = (1000.0 / 32768.0_f32).to_radians();
                 gyro_register_value = GYRO_RANGE_1000_DPS | gyro_odr;
             }
             _ => {
                 // default includes ImuCommon::GYRO_FULL_SCALE_2000_DPS
-                self.common.gyro_scale_dps = 2000.0 / 32768.0;
+                self.common.gyro_scale_rps = (2000.0 / 32768.0_f32).to_radians();
                 gyro_register_value = GYRO_RANGE_2000_DPS | gyro_odr;
             }
         }
@@ -372,7 +372,7 @@ impl<B: ImuBus> Lsm6ds<B> {
         acc_register_value
     }
 
-    pub fn map_acc(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+    pub fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let acc16 = Vector3di16 {
             x: i16::from_le_bytes([buf[0], buf[1]]),
             y: i16::from_le_bytes([buf[2], buf[3]]),
@@ -382,17 +382,17 @@ impl<B: ImuBus> Lsm6ds<B> {
         ImuAxesOrder::map_vector(axis_order, &acc)
     }
 
-    pub fn map_gyro_rps(&mut self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+    pub fn map_gyro_rps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let gyro16 = Vector3di16 {
             x: i16::from_le_bytes([buf[0], buf[1]]),
             y: i16::from_le_bytes([buf[2], buf[3]]),
             z: i16::from_le_bytes([buf[4], buf[5]]),
         };
-        let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset;
+        let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
         ImuAxesOrder::map_vector(axis_order, &gyro_rps)
     }
 
-    pub fn map_acc_gyro_rps(&mut self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReadingf32 {
+    pub fn map_acc_gyro_rps(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReadingf32 {
         let acc16 = Vector3di16 {
             x: i16::from_le_bytes([buf[6], buf[7]]),
             y: i16::from_le_bytes([buf[8], buf[9]]),
@@ -405,7 +405,7 @@ impl<B: ImuBus> Lsm6ds<B> {
         };
         let imu_reading = ImuReadingf32 {
             acc: Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset,
-            gyro_rps: Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset,
+            gyro_rps: Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps,
         };
         ImuAxesOrder::map_reading(axis_order, &imu_reading)
     }
@@ -453,7 +453,7 @@ mod tests {
     fn map_acc() {
         let imu_bus = MockImuBus::new();
 
-        let mut imu: Lsm6ds<MockImuBus> = Lsm6ds::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let imu: Lsm6ds<MockImuBus> = Lsm6ds::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
         let acc = imu.map_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);

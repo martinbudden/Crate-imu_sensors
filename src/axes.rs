@@ -116,9 +116,9 @@ impl ImuAxesOrder {
     pub fn map_reading(self, data: &ImuReadingf32) -> ImuReadingf32 {
         // use a feature flag to hardcode the mapping, so that the match statement can be bypassed for optimal performance.
         cfg_if! {
-        if #[cfg(feature = "LIBRARY_SENSORS_IMU_FIXED_AXES_XPOS_YPOS_ZPOS")] {
+        if #[cfg(feature = "axes_xpos_ypos_zpos")] {
             *data
-        } else if #[cfg(feature = "LIBRARY_SENSORS_IMU_FIXED_AXES_YNEG_XPOS_ZPOS")] {
+        } else if #[cfg(feature = "axes_yneg_xpos_zpos")] {
             ImuReadingf32 {
                 acc: Vector3df32 {
                     x: -data.acc.y,
