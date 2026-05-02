@@ -1,4 +1,3 @@
-use core::f32::consts::PI;
 use vqm::{Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
@@ -201,7 +200,7 @@ impl<B: ImuBus> Mpu6886<B> {
             const GFS_2000DPS: u8 = 3;
             const GYRO_FCHOICE_B: u8 = 0x00; // enables gyro update rate and filter configuration using REG_CONFIG
             self.bus.write_register(self.config.address, REG_GYRO_CONFIG, (GFS_2000DPS << 3) | GYRO_FCHOICE_B).await?;
-            self.common.gyro_scale_rps = (2000.0 * PI) / (32768.0 * 180.0);
+            self.common.gyro_scale_dps = 2000.0 / 32768.0;
             self.common.gyro_scale_rps = self.common.gyro_scale_rps.to_radians();
             delay_ms(1);
         }
@@ -279,6 +278,16 @@ impl<B: ImuBus> Mpu6886<B> {
         ImuAxesOrder::map_vector(axis_order, &gyro_rps)
     }
 
+    pub fn map_gyro_dps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let gyro16 = Vector3di16 {
+            x: i16::from_be_bytes([buf[0], buf[1]]),
+            y: i16::from_be_bytes([buf[2], buf[3]]),
+            z: i16::from_be_bytes([buf[4], buf[5]]),
+        };
+        let gyro_dps = Vector3df32::from(gyro16) * self.common.gyro_scale_dps - self.common.gyro_offset_dps;
+        ImuAxesOrder::map_vector(axis_order, &gyro_dps)
+    }
+
     pub fn map_acc_gyro_rps(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReadingf32 {
         let gyro16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
@@ -302,6 +311,7 @@ impl<B: ImuBus> Mpu6886<B> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
     use super::*;
     use crate::{ImuAxesOrder, MockImuBus};
 
@@ -321,10 +331,10 @@ mod tests {
 
         assert_eq!(0, gyro_register_value);
         assert_eq!(0, acc_register_value);
-        //assert_eq!(2000.0 / 32768.0, state.gyro_scale_dps);
-        //assert_eq!(16.0 / 32768.0, state.acc_scale);
-        //assert_eq!(6664, state.gyro_sample_rate_hz);
-        //assert_eq!(6664, state.acc_sample_rate_hz);
+        assert_eq!(2000.0 / 32768.0, imu.common.gyro_scale_dps);
+        assert_eq!(8.0 / 32768.0, imu.common.acc_scale);
+        assert_eq!(500, imu.common.gyro_sample_rate_hz);
+        assert_eq!(500, imu.common.acc_sample_rate_hz);
     }
     #[test]
     fn map_acc() {

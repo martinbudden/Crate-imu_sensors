@@ -111,7 +111,7 @@ impl<B: ImuBus> ImuMock<B> {
     }
 
     pub fn set_gyro_dps(&mut self, gyro_dps: Vector3df32) {
-        let gyro_dps_unscaled = (gyro_dps.to_radians() + self.common.gyro_offset_rps) / self.common.gyro_scale_rps;
+        let gyro_dps_unscaled = (gyro_dps + self.common.gyro_offset_dps) / self.common.gyro_scale_dps;
         let gyro_dps_i16: Vector3di16 = gyro_dps_unscaled.into();
         let x = gyro_dps_i16.x.to_le_bytes();
         let y = gyro_dps_i16.y.to_le_bytes();
@@ -127,7 +127,7 @@ impl<B: ImuBus> ImuMock<B> {
     pub fn gyro_dps(&self) -> Vector3df32 {
         let mut buf = [0u8; 6];
         buf.copy_from_slice(&self.buf[6..12]);
-        self.map_gyro_rps(buf, self.common.axis_order).to_degrees()
+        self.map_gyro_dps(buf, self.common.axis_order)
     }
 
     /// # Errors
@@ -160,22 +160,24 @@ impl<B: ImuBus> ImuMock<B> {
         }
         match gyro_sensitivity {
             ImuCommon::GYRO_FULL_SCALE_125_DPS => {
-                self.common.gyro_scale_rps = (125.0 * PI) / (32768.0 * 180.0);
+                self.common.gyro_scale_dps = 125.0 / 32768.0;
             }
             ImuCommon::GYRO_FULL_SCALE_250_DPS => {
-                self.common.gyro_scale_rps = (250.0 * PI) / (32768.0 * 180.0);
+                self.common.gyro_scale_dps = 250.0 / 32768.0;
             }
             ImuCommon::GYRO_FULL_SCALE_500_DPS => {
-                self.common.gyro_scale_rps = (500.0 * PI) / (32768.0 * 180.0);
+                self.common.gyro_scale_dps = 500.0 / 32768.0;
             }
             ImuCommon::GYRO_FULL_SCALE_1000_DPS => {
-                self.common.gyro_scale_rps = (1000.0 * PI) / (32768.0 * 180.0);
+                self.common.gyro_scale_dps = 1000.0 / 32768.0;
             }
             _ => {
                 // default includes ImuCommon::GYRO_FULL_SCALE_2000_DPS
-                self.common.gyro_scale_rps = (2000.0 * PI) / (32768.0 * 180.0);
+                self.common.gyro_scale_dps = 2000.0 / 32768.0;
             }
         }
+        self.common.gyro_offset_rps = self.common.gyro_offset_dps.to_radians();
+
         Ok((0, 0))
     }
 
@@ -197,6 +199,16 @@ impl<B: ImuBus> ImuMock<B> {
         };
         let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
         ImuAxesOrder::map_vector(axis_order, &gyro_rps)
+    }
+
+    pub fn map_gyro_dps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let gyro16 = Vector3di16 {
+            x: i16::from_le_bytes([buf[0], buf[1]]),
+            y: i16::from_le_bytes([buf[2], buf[3]]),
+            z: i16::from_le_bytes([buf[4], buf[5]]),
+        };
+        let gyro_dps = Vector3df32::from(gyro16) * self.common.gyro_scale_dps - self.common.gyro_offset_dps;
+        ImuAxesOrder::map_vector(axis_order, &gyro_dps)
     }
 
     pub fn map_acc_gyro_rps(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReadingf32 {
@@ -222,9 +234,11 @@ impl<B: ImuBus> ImuMock<B> {
 
 #[cfg(test)]
 mod tests {
+    // we can do float comparisons because all floats have been converted from i16s, and so can be represented exactly.
+    #![allow(clippy::float_cmp)]
+
     use super::*;
     use crate::{ImuAxesOrder, MockImuBus};
-    use approx::{assert_abs_diff_eq, assert_relative_eq};
 
     fn is_normal<T: Sized + Send + Sync + Unpin>() {}
 
@@ -248,25 +262,43 @@ mod tests {
         //assert_eq!(6664, state.acc_sample_rate_hz);
     }
     #[test]
-    fn map_acc() {
+    fn acc_buf() {
         let imu_bus = MockImuBus::new();
         let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         // TODO: sit down and work out some useful test data for this
-        let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
+        let data: [u8; 6] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
         let acc = imu.map_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);
         assert_eq!(Vector3df32 { x: 0.0, y: 0.0, z: 0.0 }, acc);
+    }
+    #[test]
+    fn gyro_buf() {
+        let imu_bus = MockImuBus::new();
+        let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+
+        // TODO: sit down and work out some useful test data for this
+        let data: [u8; 6] = [0x10, 0x00, 0x00, 0x01, 0x00, 0x7f];
+        let gyro_dps = imu.map_gyro_dps(data, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        assert_eq!(Vector3df32 { x: 0.976_562_5, y: 15.625, z: 1984.375 }, gyro_dps);
+
+        let data: [u8; 6] = [0x01, 0x00, 0x80, 0x00, 0xff, 0x7f];
+        let gyro_dps = imu.map_gyro_dps(data, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        assert_eq!(Vector3df32 { x: 0.061_035_156, y: 7.8125, z: 1999.939 }, gyro_dps);
     }
     #[test]
     fn scale_acc() {
         let imu_bus = MockImuBus::new();
         let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
-        // TODO: sit down and work out some useful test data for this
+        let acc_scale = imu.acc_scale() * 32768.0;
+        assert_eq!(8.0, acc_scale);
+
         let acc = Vector3df32::new(0.5, 2.0, 1.0);
         imu.set_acc(acc);
+
         let buf = imu.buf;
-        assert_eq!([0, 8, 0, 32, 0, 16, 0, 0, 0, 0, 0, 0], buf);
+        assert_eq!([0, 0x08, 0, 0x20, 0, 0x10, 0, 0, 0, 0, 0, 0], buf);
+
         let a = imu.acc();
         assert_eq!(Vector3df32::new(0.5, 2.0, 1.0), a);
     }
@@ -274,13 +306,64 @@ mod tests {
     fn scale_gyro() {
         let imu_bus = MockImuBus::new();
         let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let gyro_scale_dps = imu.gyro_scale_dps() * 32768.0;
+        assert_eq!(2000.0, gyro_scale_dps);
 
-        // TODO: sit down and work out some useful test data for this
+        let gyro_dps = Vector3df32::new(125.0, 1000.0, 1750.0);
+        imu.set_gyro_dps(gyro_dps);
+
+        let buf = imu.buf;
+        assert_eq!(
+            [
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //
+                0x00, 0x08, 0x00, 0x40, 0x00, 0x70
+            ],
+            buf
+        );
+
+        let g = imu.gyro_dps();
+        assert_eq!(Vector3df32 { x: 125.0, y: 1000.0, z: 1750.0 }, gyro_dps);
+
         let gyro_dps = Vector3df32::new(500.0, 1000.0, 2000.0);
         imu.set_gyro_dps(gyro_dps);
+
+        let buf = imu.buf;
+        assert_eq!(
+            [
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //
+                0x00, 0x20, 0x00, 0x40, 0xFF, 0x7F
+            ],
+            buf
+        );
         let g = imu.gyro_dps();
-        assert_relative_eq!(500.0, g.x);
-        assert_relative_eq!(1000.0, g.y);
-        assert_abs_diff_eq!(2000.0, g.z, epsilon = 7e-2);
+        assert_eq!(Vector3df32 { x: 500.0, y: 1000.0, z: 1999.939 }, g);
+
+        let gyro_dps = Vector3df32::new(2000.0, 4000.0, 10_000.0);
+        imu.set_gyro_dps(gyro_dps);
+
+        let buf = imu.buf;
+        assert_eq!(
+            [
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //
+                0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F
+            ],
+            buf
+        );
+        let g = imu.gyro_dps();
+        assert_eq!(Vector3df32 { x: 1999.939, y: 1999.939, z: 1999.939 }, g);
+
+        let gyro_dps = Vector3df32::new(-2000.0, -4000.0, -10_000.0);
+        imu.set_gyro_dps(gyro_dps);
+
+        let buf = imu.buf;
+        assert_eq!(
+            [
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //
+                0x00, 0x80, 0x00, 0x80, 0x00, 0x80
+            ],
+            buf
+        );
+        let g = imu.gyro_dps();
+        assert_eq!(Vector3df32 { x: -2000.0, y: -2000.0, z: -2000.0 }, g);
     }
 }

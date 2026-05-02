@@ -1,5 +1,4 @@
 //#![allow(unused)]
-use core::f32::consts::PI;
 use vqm::{Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
@@ -359,142 +358,66 @@ impl<B: ImuBus> Imu426xx<B> {
 
     pub fn calculate_gyro_odr(&mut self, target_output_data_rate_hz: u32, gyro_sensitivity: u8) -> u8 {
         // calculate the GYRO_ODR bit values to write to the REG_GYRO_CONFIG0 register
-        let gyro_odr = if target_output_data_rate_hz == 0 {
-            GYRO_ODR_8000_HZ // default to 8kHz
-        } else if target_output_data_rate_hz >= 32000 {
-            GYRO_ODR_32000_HZ
-        } else if target_output_data_rate_hz >= 16000 {
-            GYRO_ODR_16000_HZ
-        } else if target_output_data_rate_hz >= 8000 {
-            GYRO_ODR_8000_HZ
-        } else if target_output_data_rate_hz >= 4000 {
-            GYRO_ODR_4000_HZ
-        } else if target_output_data_rate_hz >= 2000 {
-            GYRO_ODR_2000_HZ
-        } else if target_output_data_rate_hz >= 1000 {
-            GYRO_ODR_1000_HZ
-        } else if target_output_data_rate_hz >= 500 {
-            GYRO_ODR_500_HZ
-        } else if target_output_data_rate_hz >= 200 {
-            GYRO_ODR_200_HZ
-        } else if target_output_data_rate_hz >= 100 {
-            GYRO_ODR_100_HZ
-        } else if target_output_data_rate_hz >= 50 {
-            GYRO_ODR_50_HZ
-        } else if target_output_data_rate_hz >= 25 {
-            GYRO_ODR_25_HZ
-        } else {
-            GYRO_ODR_12_P_5_HZ
+        let (gyro_odr, gyro_sample_rate_hz) = match target_output_data_rate_hz {
+            8001..=16_000 => (GYRO_ODR_16000_HZ, 16_000),
+            0 | 4001..=8000 => (GYRO_ODR_8000_HZ, 8000),
+            2001..=4000 => (GYRO_ODR_4000_HZ, 4000),
+            1001..=2000 => (GYRO_ODR_2000_HZ, 2000),
+            501..=1000 => (GYRO_ODR_1000_HZ, 1000),
+            201..=500 => (GYRO_ODR_500_HZ, 500),
+            101..=200 => (GYRO_ODR_200_HZ, 200),
+            51..=100 => (GYRO_ODR_100_HZ, 100),
+            26..=50 => (GYRO_ODR_50_HZ, 50),
+            14..=25 => (GYRO_ODR_25_HZ, 25),
+            1..=13 => (GYRO_ODR_12_P_5_HZ, 12),
+            _ => (GYRO_ODR_32000_HZ, 32_000),
         };
-
-        self.common.gyro_sample_rate_hz = match gyro_odr {
-            GYRO_ODR_32000_HZ => 32000,
-            GYRO_ODR_16000_HZ => 16000,
-            GYRO_ODR_8000_HZ => 8000,
-            GYRO_ODR_4000_HZ => 4000,
-            GYRO_ODR_2000_HZ => 2000,
-            GYRO_ODR_1000_HZ => 1000,
-            GYRO_ODR_500_HZ => 500,
-            GYRO_ODR_200_HZ => 200,
-            GYRO_ODR_100_HZ => 100,
-            GYRO_ODR_50_HZ => 50,
-            GYRO_ODR_25_HZ => 25,
-            _ => 12,
-        };
+        self.common.gyro_sample_rate_hz = gyro_sample_rate_hz;
 
         // calculate the GYRO_RANGE bit values to write to the REG_GYRO_CONFIG0 register
+        let (gyro_scale_dps, gyro_register_value) = match gyro_sensitivity {
+            ImuCommon::GYRO_FULL_SCALE_125_DPS => (125.0, GYRO_RANGE_125_DPS),
+            ImuCommon::GYRO_FULL_SCALE_250_DPS => (250.0, GYRO_RANGE_250_DPS),
+            ImuCommon::GYRO_FULL_SCALE_500_DPS => (500.0, GYRO_RANGE_500_DPS),
+            ImuCommon::GYRO_FULL_SCALE_1000_DPS => (1000.0, GYRO_RANGE_1000_DPS),
+            _ => (2000.0, GYRO_RANGE_2000_DPS),
+        };
+        self.common.gyro_scale_dps = gyro_scale_dps / 32768.0;
+        self.common.gyro_scale_rps = self.common.gyro_scale_dps.to_radians();
 
-        let gyro_register_value: u8;
-        match gyro_sensitivity {
-            ImuCommon::GYRO_FULL_SCALE_125_DPS => {
-                self.common.gyro_scale_rps = (125.0 * PI) / (32768.0 * 180.0);
-                gyro_register_value = GYRO_RANGE_125_DPS | gyro_odr;
-            }
-            ImuCommon::GYRO_FULL_SCALE_250_DPS => {
-                self.common.gyro_scale_rps = (250.0 * PI) / (32768.0 * 180.0);
-                gyro_register_value = GYRO_RANGE_250_DPS | gyro_odr;
-            }
-            ImuCommon::GYRO_FULL_SCALE_500_DPS => {
-                self.common.gyro_scale_rps = (500.0 * PI) / (32768.0 * 180.0);
-                gyro_register_value = GYRO_RANGE_500_DPS | gyro_odr;
-            }
-            ImuCommon::GYRO_FULL_SCALE_1000_DPS => {
-                self.common.gyro_scale_rps = (1000.0 * PI) / (32768.0 * 180.0);
-                gyro_register_value = GYRO_RANGE_1000_DPS | gyro_odr;
-            }
-            _ => {
-                // default includes ImuCommon::GYRO_FULL_SCALE_2000_DPS
-                self.common.gyro_scale_rps = (2000.0 * PI) / (32768.0 * 180.0);
-                gyro_register_value = GYRO_RANGE_2000_DPS | gyro_odr;
-            }
-        }
-        gyro_register_value
+        gyro_register_value | gyro_odr
     }
 
     pub fn calculate_acc_odr(&mut self, target_output_data_rate_hz: u32, acc_sensitivity: u8) -> u8 {
-        let acc_odr = if target_output_data_rate_hz == 0 {
-            ACCEL_ODR_8000_HZ // default to 8kHz
-        } else if target_output_data_rate_hz >= 32000 {
-            ACCEL_ODR_32000_HZ
-        } else if target_output_data_rate_hz >= 16000 {
-            ACCEL_ODR_16000_HZ
-        } else if target_output_data_rate_hz >= 8000 {
-            ACCEL_ODR_8000_HZ
-        } else if target_output_data_rate_hz >= 4000 {
-            ACCEL_ODR_4000_HZ
-        } else if target_output_data_rate_hz >= 2000 {
-            ACCEL_ODR_2000_HZ
-        } else if target_output_data_rate_hz >= 1000 {
-            ACCEL_ODR_1000_HZ
-        } else if target_output_data_rate_hz >= 500 {
-            ACCEL_ODR_500_HZ
-        } else if target_output_data_rate_hz >= 200 {
-            ACCEL_ODR_200_HZ
-        } else if target_output_data_rate_hz >= 100 {
-            ACCEL_ODR_100_HZ
-        } else if target_output_data_rate_hz >= 50 {
-            ACCEL_ODR_50_HZ
-        } else if target_output_data_rate_hz >= 25 {
-            ACCEL_ODR_25_HZ
-        } else {
-            ACCEL_ODR_12_P_5_HZ
+        let (acc_odr, acc_sample_rate_hz) = match target_output_data_rate_hz {
+            8001..=16_000 => (ACCEL_ODR_16000_HZ, 16_000),
+            0 | 4001..=8000 => (ACCEL_ODR_8000_HZ, 8000),
+            2001..=4000 => (ACCEL_ODR_4000_HZ, 4000),
+            1001..=2000 => (ACCEL_ODR_2000_HZ, 2000),
+            501..=1000 => (ACCEL_ODR_1000_HZ, 1000),
+            201..=500 => (ACCEL_ODR_500_HZ, 500),
+            101..=200 => (ACCEL_ODR_200_HZ, 200),
+            51..=100 => (ACCEL_ODR_100_HZ, 100),
+            26..=50 => (ACCEL_ODR_50_HZ, 50),
+            14..=25 => (ACCEL_ODR_25_HZ, 25),
+            1..=13 => (ACCEL_ODR_12_P_5_HZ, 12),
+            _ => (ACCEL_ODR_32000_HZ, 32_000),
         };
-        self.common.acc_sample_rate_hz = match acc_odr {
-            ACCEL_ODR_32000_HZ => 32000,
-            ACCEL_ODR_16000_HZ => 16000,
-            ACCEL_ODR_8000_HZ => 8000,
-            ACCEL_ODR_4000_HZ => 4000,
-            ACCEL_ODR_2000_HZ => 2000,
-            ACCEL_ODR_1000_HZ => 1000,
-            ACCEL_ODR_500_HZ => 500,
-            ACCEL_ODR_200_HZ => 200,
-            ACCEL_ODR_100_HZ => 100,
-            ACCEL_ODR_50_HZ => 50,
-            ACCEL_ODR_25_HZ => 25,
-            _ => 12,
-        };
+        self.common.acc_sample_rate_hz = acc_sample_rate_hz;
+
         // calculate the ACCEL_ODR bit values to write to the REG_ACCEL_CONFIG0 register
-        let acc_register_value: u8;
-        match acc_sensitivity {
-            ImuCommon::ACC_FULL_SCALE_2G => {
-                self.common.acc_scale = 2.0 / 32768.0;
-                acc_register_value = ACCEL_RANGE_2G | acc_odr;
-            }
-            ImuCommon::ACC_FULL_SCALE_4G => {
-                self.common.acc_scale = 4.0 / 32768.0;
-                acc_register_value = ACCEL_RANGE_4G | acc_odr;
-            }
-            ImuCommon::ACC_FULL_SCALE_8G => {
-                self.common.acc_scale = 8.0 / 32768.0;
-                acc_register_value = ACCEL_RANGE_8G | acc_odr;
-            }
+        let (acc_scale, acc_register_value) = match acc_sensitivity {
+            ImuCommon::ACC_FULL_SCALE_2G => (2.0, ACCEL_RANGE_2G),
+            ImuCommon::ACC_FULL_SCALE_4G => (4.0, ACCEL_RANGE_4G),
+            ImuCommon::ACC_FULL_SCALE_8G => (8.0, ACCEL_RANGE_8G),
             _ => {
                 // default includes  ImuCommon::ACC_FULL_SCALE_16G
-                self.common.acc_scale = 16.0 / 32768.0;
-                acc_register_value = ACCEL_RANGE_16G | acc_odr;
+                (16.0, ACCEL_RANGE_16G)
             }
-        }
-        acc_register_value
+        };
+        self.common.acc_scale = acc_scale / 32768.0;
+
+        acc_register_value | acc_odr
     }
 
     pub fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
@@ -515,6 +438,16 @@ impl<B: ImuBus> Imu426xx<B> {
         };
         let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
         ImuAxesOrder::map_vector(axis_order, &gyro_rps)
+    }
+
+    pub fn map_gyro_dps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let gyro16 = Vector3di16 {
+            x: i16::from_le_bytes([buf[0], buf[1]]),
+            y: i16::from_le_bytes([buf[2], buf[3]]),
+            z: i16::from_le_bytes([buf[4], buf[5]]),
+        };
+        let gyro_dps = Vector3df32::from(gyro16) * self.common.gyro_scale_dps - self.common.gyro_offset_dps;
+        ImuAxesOrder::map_vector(axis_order, &gyro_dps)
     }
 
     pub fn map_acc_gyro_rps(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReadingf32 {
@@ -540,6 +473,8 @@ impl<B: ImuBus> Imu426xx<B> {
 
 #[cfg(test)]
 mod tests {
+    // we can do float comparisons because all floats have been converted from i16s, and so can be represented exactly.
+    #![allow(clippy::float_cmp)]
     use super::*;
     use crate::{ImuAxesOrder, MockImuBus};
 
@@ -559,10 +494,10 @@ mod tests {
 
         assert_eq!(8000, gyro_odr);
         assert_eq!(8000, acc_odr);
-        //assert_eq!(2000.0 / 32768.0, state.gyro_scale_dps);
-        //assert_eq!(16.0 / 32768.0, state.acc_scale);
-        //assert_eq!(6664, state.gyro_sample_rate_hz);
-        //assert_eq!(6664, state.acc_sample_rate_hz);
+        assert_eq!(2000.0 / 32768.0, imu.common.gyro_scale_dps);
+        assert_eq!(16.0 / 32768.0, imu.common.acc_scale);
+        assert_eq!(8000, imu.common.gyro_sample_rate_hz);
+        assert_eq!(8000, imu.common.acc_sample_rate_hz);
     }
     #[test]
     fn map_acc() {

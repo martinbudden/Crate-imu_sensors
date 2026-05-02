@@ -1,4 +1,3 @@
-use core::f32::consts::PI;
 use vqm::{Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
@@ -195,73 +194,36 @@ impl<B: ImuBus> Mpu6050<B> {
         self.bus.write_register(self.config.address, REG_INT_ENABLE, DATA_READY_ENABLE).await?;
         delay_ms(15);
 
-        let gyro_sample_rate_divider = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 4000 {
-            0 // div by 1, ie 8kHz
-        } else if target_output_data_rate_hz > 2000 {
-            1 // div by 2
-        } else if target_output_data_rate_hz > 1000 {
-            3 // div by 4
-        } else if target_output_data_rate_hz > 500 {
-            7 // div by 8
-        } else if target_output_data_rate_hz > 250 {
-            15
-        } else {
-            31
+        // TODO: write _gyro_sample_rate_divider to appropriate register.
+        let (_gyro_sample_rate_divider, gyro_sample_rate_hz) = match target_output_data_rate_hz {
+            2001..=4000 => (1, 4000), // div by 2
+            1001..=2000 => (3, 2000), // div by 4
+            501..=1000 => (7, 1000),  // div by 8
+            251..=500 => (15, 500),
+            1..=250 => (31, 250), // assuming 8000 / (31 + 1) = 250
+            _ => (0, 8000),       // div by 1
         };
 
-        // report the value that was actually set
-        self.common.gyro_sample_rate_hz = if gyro_sample_rate_divider == 0 {
-            8000
-        } else if gyro_sample_rate_divider == 1 {
-            4000
-        } else if gyro_sample_rate_divider == 3 {
-            2000
-        } else if gyro_sample_rate_divider == 7 {
-            1000
-        } else if gyro_sample_rate_divider == 15 {
-            500
-        } else {
-            125
+        self.common.gyro_sample_rate_hz = gyro_sample_rate_hz;
+        let (gyro_scale_dps, gyro_range) = match gyro_sensitivity {
+            // full scale 125 not supported so use 250 instead.
+            ImuCommon::GYRO_FULL_SCALE_125_DPS | ImuCommon::GYRO_FULL_SCALE_250_DPS => (250.0, GYRO_RANGE_250_DPS),
+            ImuCommon::GYRO_FULL_SCALE_500_DPS => (500.0, GYRO_RANGE_500_DPS),
+            ImuCommon::GYRO_FULL_SCALE_1000_DPS => (1000.0, GYRO_RANGE_1000_DPS),
+            _ => (2000.0, GYRO_RANGE_2000_DPS),
         };
-        let gyro_range = match gyro_sensitivity {
-            ImuCommon::GYRO_FULL_SCALE_125_DPS | ImuCommon::GYRO_FULL_SCALE_250_DPS => {
-                self.common.gyro_scale_rps = (250.0 * PI) / (32768.0 * 180.0);
-                GYRO_RANGE_250_DPS
-            }
-            ImuCommon::GYRO_FULL_SCALE_500_DPS => {
-                self.common.gyro_scale_rps = (500.0 * PI) / (32768.0 * 180.0);
-                GYRO_RANGE_500_DPS
-            }
-            ImuCommon::GYRO_FULL_SCALE_1000_DPS => {
-                self.common.gyro_scale_rps = (1000.0 * PI) / (32768.0 * 180.0);
-                GYRO_RANGE_1000_DPS
-            }
-            _ => {
-                // default includes ImuCommon::GYRO_FULL_SCALE_2000_DPS
-                self.common.gyro_scale_rps = (2000.0 * PI) / (32768.0 * 180.0);
-                GYRO_RANGE_2000_DPS
-            }
-        };
+        self.common.gyro_scale_dps = gyro_scale_dps / 32768.0;
+        self.common.gyro_scale_rps = self.common.gyro_scale_dps.to_radians();
 
         self.common.acc_sample_rate_hz = 1000;
-        let acc_range = match acc_sensitivity {
-            ImuCommon::ACC_FULL_SCALE_2G => {
-                self.common.acc_scale = 2.0 / 32768.0;
-                ACCEL_RANGE_2G
-            }
-            ImuCommon::ACC_FULL_SCALE_4G => {
-                self.common.acc_scale = 4.0 / 32768.0;
-                ACCEL_RANGE_4G
-            }
-            ImuCommon::ACC_FULL_SCALE_8G => {
-                self.common.acc_scale = 8.0 / 32768.0;
-                ACCEL_RANGE_8G
-            }
-            _ => {
-                self.common.acc_scale = 16.0 / 32768.0;
-                ACCEL_RANGE_16G
-            }
+        let (acc_scale, acc_range) = match acc_sensitivity {
+            ImuCommon::ACC_FULL_SCALE_2G => (2.0, ACCEL_RANGE_2G),
+            ImuCommon::ACC_FULL_SCALE_4G => (4.0, ACCEL_RANGE_4G),
+            ImuCommon::ACC_FULL_SCALE_8G => (8.0, ACCEL_RANGE_8G),
+            _ => (16.0, ACCEL_RANGE_16G),
         };
+        self.common.acc_scale = acc_scale / 32768.0;
+
         Ok((gyro_range, acc_range))
     }
 
@@ -277,6 +239,7 @@ impl<B: ImuBus> Mpu6050<B> {
         let acc = Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset;
         ImuAxesOrder::map_vector(axis_order, &acc)
     }
+
     pub fn map_gyro_rps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let gyro16 = Vector3di16 {
             x: i16::from_be_bytes([buf[0], buf[1]]),
@@ -285,6 +248,16 @@ impl<B: ImuBus> Mpu6050<B> {
         };
         let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
         ImuAxesOrder::map_vector(axis_order, &gyro_rps)
+    }
+
+    pub fn map_gyro_dps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let gyro16 = Vector3di16 {
+            x: i16::from_be_bytes([buf[0], buf[1]]),
+            y: i16::from_be_bytes([buf[2], buf[3]]),
+            z: i16::from_be_bytes([buf[4], buf[5]]),
+        };
+        let gyro_dps = Vector3df32::from(gyro16) * self.common.gyro_scale_dps - self.common.gyro_offset_dps;
+        ImuAxesOrder::map_vector(axis_order, &gyro_dps)
     }
 
     pub fn map_acc_gyro_rps(&self, buf: [u8; 14], axis_order: ImuAxesOrder) -> ImuReadingf32 {
@@ -344,6 +317,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    // we can do float comparisons because all floats have been converted from i16s, and so can be represented exactly.
     #![allow(clippy::float_cmp)]
     use super::*;
     use crate::{ImuAxesOrder, MockImuBus};

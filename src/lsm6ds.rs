@@ -1,4 +1,3 @@
-use core::f32::consts::PI;
 use vqm::{Vector3df32, Vector3di16};
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
@@ -260,117 +259,59 @@ impl<B: ImuBus> Lsm6ds<B> {
     }
 
     pub fn calculate_gyro_odr(&mut self, target_output_data_rate_hz: u32, gyro_sensitivity: u8) -> u8 {
-        let gyro_odr = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 3332 {
-            GYRO_ODR_6664_HZ
-        } else if target_output_data_rate_hz > 1666 {
-            GYRO_ODR_3332_HZ
-        } else if target_output_data_rate_hz > 833 {
-            GYRO_ODR_1666_HZ
-        } else if target_output_data_rate_hz > 416 {
-            GYRO_ODR_833_HZ
-        } else if target_output_data_rate_hz > 208 {
-            GYRO_ODR_416_HZ
-        } else if target_output_data_rate_hz > 104 {
-            GYRO_ODR_208_HZ
-        } else if target_output_data_rate_hz > 52 {
-            GYRO_ODR_104_HZ
-        } else if target_output_data_rate_hz > 26 {
-            GYRO_ODR_52_HZ
-        } else if target_output_data_rate_hz > 13 {
-            GYRO_ODR_26_HZ
-        } else {
-            GYRO_ODR_12P5_HZ
+        let (gyro_odr, gyro_sample_rate_hz) = match target_output_data_rate_hz {
+            1667..=3332 => (GYRO_ODR_3332_HZ, 3332),
+            834..=1666 => (GYRO_ODR_1666_HZ, 1666),
+            417..=833 => (GYRO_ODR_833_HZ, 833),
+            209..=416 => (GYRO_ODR_416_HZ, 416),
+            105..=208 => (GYRO_ODR_208_HZ, 26),
+            53..=104 => (GYRO_ODR_104_HZ, 104),
+            27..=52 => (GYRO_ODR_52_HZ, 52),
+            13..=26 => (GYRO_ODR_26_HZ, 26),
+            1..=12 => (GYRO_ODR_12P5_HZ, 12),
+            _ => (GYRO_ODR_6664_HZ, 6664),
         };
-        self.common.gyro_sample_rate_hz = match gyro_odr {
-            GYRO_ODR_6664_HZ => 6664,
-            GYRO_ODR_3332_HZ => 3332,
-            GYRO_ODR_1666_HZ => 1666,
-            GYRO_ODR_833_HZ => 833,
-            GYRO_ODR_416_HZ => 416,
-            GYRO_ODR_208_HZ => 208,
-            GYRO_ODR_104_HZ => 104,
-            GYRO_ODR_52_HZ => 52,
-            GYRO_ODR_26_HZ => 26,
-            _ => 12,
+        self.common.gyro_sample_rate_hz = gyro_sample_rate_hz;
+
+        let (gyro_scale, gyro_register_value) = match gyro_sensitivity {
+            ImuCommon::GYRO_FULL_SCALE_125_DPS | ImuCommon::GYRO_FULL_SCALE_250_DPS => (245.0, GYRO_RANGE_125_DPS),
+            ImuCommon::GYRO_FULL_SCALE_500_DPS => (500.0, GYRO_RANGE_500_DPS),
+            ImuCommon::GYRO_FULL_SCALE_1000_DPS => (1000.0, GYRO_RANGE_1000_DPS),
+            _ => (2000.0, GYRO_RANGE_2000_DPS),
         };
-        let gyro_register_value: u8;
-        match gyro_sensitivity {
-            ImuCommon::GYRO_FULL_SCALE_125_DPS | ImuCommon::GYRO_FULL_SCALE_250_DPS => {
-                self.common.gyro_scale_dps = 245.0 / 32768.0;
-                gyro_register_value = GYRO_RANGE_125_DPS | gyro_odr;
-            }
-            ImuCommon::GYRO_FULL_SCALE_500_DPS => {
-                self.common.gyro_scale_rps = (500.0 * PI) / (32768.0 * 180.0);
-                gyro_register_value = GYRO_RANGE_500_DPS | gyro_odr;
-            }
-            ImuCommon::GYRO_FULL_SCALE_1000_DPS => {
-                self.common.gyro_scale_rps = (1000.0 * PI) / (32768.0 * 180.0);
-                gyro_register_value = GYRO_RANGE_1000_DPS | gyro_odr;
-            }
-            _ => {
-                // default includes ImuCommon::GYRO_FULL_SCALE_2000_DPS
-                self.common.gyro_scale_rps = (2000.0 * PI) / (32768.0 * 180.0);
-                gyro_register_value = GYRO_RANGE_2000_DPS | gyro_odr;
-            }
-        }
-        gyro_register_value
+        self.common.gyro_scale_dps = gyro_scale / 32768.0;
+        self.common.gyro_scale_rps = self.common.gyro_scale_dps.to_radians();
+
+        gyro_register_value | gyro_odr
     }
 
     pub fn calculate_acc_odr(&mut self, target_output_data_rate_hz: u32, acc_sensitivity: u8) -> u8 {
-        let acc_odr = if target_output_data_rate_hz == 0 || target_output_data_rate_hz > 3332 {
-            ACC_ODR_6664_HZ
-        } else if target_output_data_rate_hz > 1666 {
-            ACC_ODR_3332_HZ
-        } else if target_output_data_rate_hz > 833 {
-            ACC_ODR_1666_HZ
-        } else if target_output_data_rate_hz > 416 {
-            ACC_ODR_833_HZ
-        } else if target_output_data_rate_hz > 208 {
-            ACC_ODR_416_HZ
-        } else if target_output_data_rate_hz > 104 {
-            ACC_ODR_208_HZ
-        } else if target_output_data_rate_hz > 52 {
-            ACC_ODR_104_HZ
-        } else if target_output_data_rate_hz > 26 {
-            ACC_ODR_52_HZ
-        } else if target_output_data_rate_hz > 13 {
-            ACC_ODR_26_HZ
-        } else {
-            ACC_ODR_12P5_HZ
+        let (acc_odr, acc_sample_rate_hz) = match target_output_data_rate_hz {
+            1667..=3332 => (ACC_ODR_3332_HZ, 3332),
+            834..=1666 => (ACC_ODR_1666_HZ, 1666),
+            417..=833 => (ACC_ODR_833_HZ, 833),
+            209..=416 => (ACC_ODR_416_HZ, 416),
+            105..=208 => (ACC_ODR_208_HZ, 26),
+            53..=104 => (ACC_ODR_104_HZ, 104),
+            27..=52 => (ACC_ODR_52_HZ, 52),
+            13..=26 => (ACC_ODR_26_HZ, 26),
+            1..=12 => (ACC_ODR_12P5_HZ, 12),
+            _ => (ACC_ODR_6664_HZ, 6664),
         };
-        self.common.acc_sample_rate_hz = match acc_odr {
-            ACC_ODR_6664_HZ => 6664,
-            ACC_ODR_3332_HZ => 3332,
-            ACC_ODR_1666_HZ => 1666,
-            ACC_ODR_833_HZ => 833,
-            ACC_ODR_416_HZ => 416,
-            ACC_ODR_208_HZ => 208,
-            ACC_ODR_104_HZ => 104,
-            ACC_ODR_52_HZ => 52,
-            ACC_ODR_26_HZ => 26,
-            _ => 12,
-        };
-        let acc_register_value: u8;
-        match acc_sensitivity {
-            ImuCommon::ACC_FULL_SCALE_2G => {
-                self.common.acc_scale = 2.0 / 32768.0;
-                acc_register_value = ACC_RANGE_2G | acc_odr;
-            }
-            ImuCommon::ACC_FULL_SCALE_4G => {
-                self.common.acc_scale = 4.0 / 32768.0;
-                acc_register_value = ACC_RANGE_4G | acc_odr;
-            }
-            ImuCommon::ACC_FULL_SCALE_8G => {
-                self.common.acc_scale = 8.0 / 32768.0;
-                acc_register_value = ACC_RANGE_8G | acc_odr;
-            }
+        self.common.acc_sample_rate_hz = acc_sample_rate_hz;
+
+        let (acc_scale, acc_register_value) = match acc_sensitivity {
+            ImuCommon::ACC_FULL_SCALE_2G => (2.0, ACC_RANGE_2G),
+            ImuCommon::ACC_FULL_SCALE_4G => (4.0, ACC_RANGE_4G),
+            ImuCommon::ACC_FULL_SCALE_8G => (8.0, ACC_RANGE_8G),
             _ => {
                 // default includes  ImuCommon::ACC_FULL_SCALE_16G
-                self.common.acc_scale = 16.0 / 32768.0;
-                acc_register_value = ACC_RANGE_16G | acc_odr;
+                (16.0, ACC_RANGE_16G)
             }
-        }
-        acc_register_value
+        };
+        self.common.acc_scale = acc_scale / 32768.0;
+
+        acc_register_value | acc_odr
     }
 
     pub fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
@@ -393,21 +334,33 @@ impl<B: ImuBus> Lsm6ds<B> {
         ImuAxesOrder::map_vector(axis_order, &gyro_rps)
     }
 
-    pub fn map_acc_gyro_rps(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReadingf32 {
-        let acc16 = Vector3di16 {
-            x: i16::from_le_bytes([buf[6], buf[7]]),
-            y: i16::from_le_bytes([buf[8], buf[9]]),
-            z: i16::from_le_bytes([buf[10], buf[11]]),
-        };
+    pub fn map_gyro_dps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let gyro16 = Vector3di16 {
             x: i16::from_le_bytes([buf[0], buf[1]]),
             y: i16::from_le_bytes([buf[2], buf[3]]),
             z: i16::from_le_bytes([buf[4], buf[5]]),
         };
+        let gyro_dps = Vector3df32::from(gyro16) * self.common.gyro_scale_dps - self.common.gyro_offset_dps;
+        ImuAxesOrder::map_vector(axis_order, &gyro_dps)
+    }
+
+    pub fn map_acc_gyro_rps(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReadingf32 {
+        let gyro16 = Vector3di16 {
+            x: i16::from_le_bytes([buf[0], buf[1]]),
+            y: i16::from_le_bytes([buf[2], buf[3]]),
+            z: i16::from_le_bytes([buf[4], buf[5]]),
+        };
+        let acc16 = Vector3di16 {
+            x: i16::from_le_bytes([buf[6], buf[7]]),
+            y: i16::from_le_bytes([buf[8], buf[9]]),
+            z: i16::from_le_bytes([buf[10], buf[11]]),
+        };
+
         let imu_reading = ImuReadingf32 {
             acc: Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset,
             gyro_rps: Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps,
         };
+
         ImuAxesOrder::map_reading(axis_order, &imu_reading)
     }
 }

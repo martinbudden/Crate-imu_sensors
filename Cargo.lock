@@ -1409,7 +1409,6 @@ dependencies = [
 name = "imu-sensors"
 version = "0.1.0"
 dependencies = [
- "approx",
  "cfg-if",
  "defmt",
  "defmt-rtt",
