@@ -18,11 +18,16 @@ categories = [
 [package.metadata.docs.rs]
 rustdoc-args = ["--html-in-header", "katex-header.html"]
 
+[build-dependencies]
+rustc_version = "0.4.1"
+
 
 [features]
 
 #default = ["libm", "rp2040", "spi"]
-default = ["rp2040", "i2c"]
+#default = ["rp2040", "i2c"]
+default = ["std"]
+std = ["embassy-time/std", "embassy-executor/platform-std"]
 #rp2040 = ["embassy-rp"]
 rp2040 = ["embassy-rp/rp2040"]
 rp2350 = ["embassy-rp/rp235xa", "embassy-rp/binary-info"] # 'rp235xa' is the 30-GPIO Pico 2 variant
@@ -37,9 +42,6 @@ lsm6dsox = []
 axes_xpos_ypos_zpos = []
 axes_yneg_xpos_zpos = []
 
-[build-dependencies]
-rustc_version = "0.4.1"
-
 # Hardware-specific Embassy HAL (example for Raspberry Pi RP2040)
 # embassy-rp = { version = "0.10.0", optional= true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl"] }
 # embassy-stm32 = { version = "0.5.0", optional = true, features = ["stm32f4xx", "time-driver"] } 
@@ -48,7 +50,7 @@ rustc_version = "0.4.1"
 [dependencies.embassy-rp]
 optional = true
 version = "0.10.0"
-features = ["time-driver", "critical-section-impl"]
+features = ["time-driver"]
 
 [dependencies.embassy-stm32]
 optional = true
@@ -59,7 +61,11 @@ optional=true
 version = "0.46.2"
 
 [dependencies]
-vqm = { version = "0.1.1" }
+embassy-time = {version = "0.5.1", default-features = false}
+embassy-executor = { version = "0.10.0", features = ["executor-thread"] }
+embassy-sync = "0.8.0"
+vqm = { version = "0.1.2" }
+#vqm = { path = "../vector-quaternion-matrix" }
 #vqm = { git = "https://github.com/martinbudden/crate-vector-quaternion-matrix" }
 
 # Use embedded-hal for I2C/SPI traits
@@ -70,10 +76,6 @@ embedded-hal = "1.0.0"
 # imu-fusion = "0.2.6"
 # imu-calib = "0.1.0"   
 
-# Core Embassy executor and concurrency primitives
-embassy-executor = { version = "0.10.0", features = ["executor-thread"] }
-embassy-sync = "0.8.0"
-embassy-time = "0.5.1"
 
 
 # For logging and panic handling
