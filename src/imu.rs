@@ -204,7 +204,6 @@ pub trait Imu {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::float_cmp)]
-    #![allow(unused_results)]
 
     #[allow(unused)]
     use super::*;
