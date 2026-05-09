@@ -138,6 +138,9 @@ pub trait Imu {
     async fn read_gyro_rps(&mut self) -> Result<Vector3df32, Self::Error>;
 
     #[allow(async_fn_in_trait)]
+    async fn read_gyro_dps(&mut self) -> Result<Vector3df32, Self::Error>;
+
+    #[allow(async_fn_in_trait)]
     async fn read_acc_gyro_rps(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>;
 
     fn acc_scale(&self) -> f32 {

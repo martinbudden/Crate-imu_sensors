@@ -213,6 +213,16 @@ impl<B: ImuBus> Imu for Imu426xx<B> {
         Ok(self.map_gyro_rps(buf, self.common.axis_order))
     }
 
+    async fn read_gyro_dps(&mut self) -> Result<Vector3df32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 6];
+        self.write_read(I2C_ADDRESS, &[REG_GYRO_DATA_X1], &mut buf).await?;
+        //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
+        Ok(self.map_gyro_dps(buf, self.common.axis_order))
+    }
+
     async fn read_acc_gyro_rps(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>
     where
         <B as ImuBus>::Error: From<<B as ImuBus>::Error>,

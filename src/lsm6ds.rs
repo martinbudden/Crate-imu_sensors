@@ -120,14 +120,17 @@ const _REG_TAP_SRC: u8 = 0x1C;
 const _REG_D6D_SRC: u8 = 0x1D;
 const _REG_STATUS_REG: u8 = 0x1E;
 const _REG_RESERVED_1F: u8 = 0x1F;
+
 const _REG_OUT_TEMP_L: u8 = 0x20;
 const _REG_OUT_TEMP_H: u8 = 0x22;
+
 const REG_OUTX_L_G: u8 = 0x22;
 const _REG_OUTX_H_G: u8 = 0x23;
 const _REG_OUTY_L_G: u8 = 0x24;
 const _REG_OUTY_H_G: u8 = 0x25;
 const _REG_OUTZ_L_G: u8 = 0x26;
 const _REG_OUTZ_H_G: u8 = 0x27;
+
 const REG_OUTX_L_ACC: u8 = 0x28;
 const _REG_OUTX_H_ACC: u8 = 0x29;
 const _REG_OUTY_L_ACC: u8 = 0x2A;
@@ -185,6 +188,16 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
         self.write_read(I2C_ADDRESS, &[REG_OUTX_L_G], &mut buf).await?;
         //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
         Ok(self.map_gyro_rps(buf, self.common.axis_order))
+    }
+
+    async fn read_gyro_dps(&mut self) -> Result<Vector3df32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 6];
+        self.write_read(I2C_ADDRESS, &[REG_OUTX_L_G], &mut buf).await?;
+        //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
+        Ok(self.map_gyro_dps(buf, self.common.axis_order))
     }
 
     async fn read_acc_gyro_rps(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>
