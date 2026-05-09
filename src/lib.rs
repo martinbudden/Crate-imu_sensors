@@ -28,7 +28,7 @@ mod spi;
 
 pub use axes::ImuAxesOrder;
 pub use i2c::I2cInterface;
-pub use imu::{AccScale, Imu, ImuCommon, ImuConfig, ImuReading, ImuReadingf32, ImuReadingf64};
+pub use imu::{AccScale, Imu, ImuCommon, ImuConfig};
 pub use imu_bus::{ImuBus, MockImuBus, SetupError};
 pub use imu_mock::ImuMock;
 pub use imu426xx::Imu426xx;

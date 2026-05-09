@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{ImuAxesOrder, ImuBus};
-use vqm::{Vector3d, Vector3df32};
+use vqm::Vector3df32;
 
 // Shared data members
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -107,15 +107,6 @@ impl ImuConfig {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct ImuReading<T> {
-    pub acc: Vector3d<T>,
-    pub gyro_rps: Vector3d<T>,
-}
-
-pub type ImuReadingf32 = ImuReading<f32>;
-pub type ImuReadingf64 = ImuReading<f64>;
-
 #[repr(u8)]
 pub enum AccScale {
     Fs2g = 0x00,
@@ -147,7 +138,7 @@ pub trait Imu {
     async fn read_gyro_rps(&mut self) -> Result<Vector3df32, Self::Error>;
 
     #[allow(async_fn_in_trait)]
-    async fn read_acc_gyro_rps(&mut self) -> Result<ImuReadingf32, Self::Error>;
+    async fn read_acc_gyro_rps(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>;
 
     fn acc_scale(&self) -> f32 {
         self.common().acc_scale

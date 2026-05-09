@@ -1,6 +1,6 @@
 use vqm::{Vector3df32, Vector3di16};
 
-use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuReadingf32};
+use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig};
 
 const I2C_ADDRESS: u8 = 0x6A;
 const _I2C_ADDRESS_ALTERNATIVE: u8 = 0x6B;
@@ -187,7 +187,7 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
         Ok(self.map_gyro_rps(buf, self.common.axis_order))
     }
 
-    async fn read_acc_gyro_rps(&mut self) -> Result<ImuReadingf32, Self::Error>
+    async fn read_acc_gyro_rps(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>
     where
         <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
     {
@@ -344,7 +344,7 @@ impl<B: ImuBus> Lsm6ds<B> {
         ImuAxesOrder::map_vector(axis_order, &gyro_dps)
     }
 
-    pub fn map_acc_gyro_rps(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> ImuReadingf32 {
+    pub fn map_acc_gyro_rps(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
         let gyro16 = Vector3di16 {
             x: i16::from_le_bytes([buf[0], buf[1]]),
             y: i16::from_le_bytes([buf[2], buf[3]]),
@@ -356,12 +356,10 @@ impl<B: ImuBus> Lsm6ds<B> {
             z: i16::from_le_bytes([buf[10], buf[11]]),
         };
 
-        let imu_reading = ImuReadingf32 {
-            acc: Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset,
-            gyro_rps: Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps,
-        };
+        let acc = Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset;
+        let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
 
-        ImuAxesOrder::map_reading(axis_order, &imu_reading)
+        ImuAxesOrder::map_acc_gyro_rps(axis_order, acc, gyro_rps)
     }
 }
 
