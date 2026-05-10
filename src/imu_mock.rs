@@ -290,7 +290,6 @@ mod tests {
 
         let a = imu.map_acc(buf, ImuAxesOrder::XPOS_YPOS_ZPOS);
         assert_eq!(Vector3df32::new(0.5, 2.0, 1.0), a);
-
     }
     #[test]
     fn read_acc() {

@@ -13,15 +13,9 @@ Once the API has stabilized this project will adopt semantic versioning, the fir
 
 ### Added
 
-- ImuMock
-
 ### Changed
 
-- all features are now lower case.
-
 ### Removed
-
-- internal use of gyro_scale_dps. now all internal calculations are in radians.
 
 ### Deprecated
 
@@ -29,6 +23,23 @@ Once the API has stabilized this project will adopt semantic versioning, the fir
 
 ### Security
 
-## [0.1.0] - 2023-04-25
+## [0.1.1] - 2026-05-10
+
+### Added
+
+- ImuMock
+- `.markdownlint.json`
+
+### Changed
+
+- all features are now lower case.
+- updated to `vqm` 0.1.3.
+- improved gyro scaling for DPS and RPS (degrees and radians per second).
+
+### Removed
+
+- `ImuReading`
+
+## [0.1.0] - 2026-04-25
 
 Initial release.
