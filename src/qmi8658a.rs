@@ -1,0 +1,379 @@
+//#![allow(unused)]
+use vqm::{Vector3df32, Vector3di16};
+
+use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig};
+
+const I2C_ADDRESS: u8 = 0x6A;
+const _I2C_ADDRESS_ALTERNATIVE: u8 = 0x6B;
+
+// **** IMU Registers and associated bitflags ****
+
+const _REG_WHO_AM_I: u8 = 0x00;
+const _REG_REVISION_ID:u8 = 0x01;
+const REG_RESET:u8 =0x60;
+
+const REG_CTRL1:u8 = 0x02;
+const REG_CTRL2:u8 = 0x03;
+const REG_CTRL3:u8 = 0x04;
+const _REG_CTRL5:u8 = 0x06;
+const REG_CTRL7:u8 = 0x08;
+const _REG_CTRL8:u8 = 0x09;
+const _REG_CTRL9:u8 = 0x0a;
+
+const _REG_CAL1_L:u8 = 0x0b;
+const _REG_CAL1_H:u8 = 0x0c;
+const _REG_CAL2_L:u8 = 0x0d;
+const _REG_CAL2_H:u8 = 0x0e;
+const _REG_CAL3_L:u8 = 0x0f;
+const _REG_CAL3_H:u8 = 0x10;
+const _REG_CAL4_L:u8 = 0x11;
+const _REG_CAL4_H:u8 = 0x12;
+
+const _REG_TEMP_L:u8 = 0x033;
+const _REG_TEMP_H:u8 = 0x034;
+const REG_AX_L:u8 = 0x035;
+const _REG_AX_H:u8 = 0x036;
+const _REG_AY_L:u8 = 0x037;
+const _REG_AY_H:u8 = 0x038;
+const _REG_AZ_L:u8 = 0x039;
+const _REG_AZ_H:u8 = 0x031;
+
+const REG_GX_L:u8 = 0x03B;
+const _REG_GX_H:u8 = 0x03c;
+const _REG_GY_L:u8 = 0x03d;
+const _REG_GY_H:u8 = 0x03e;
+const _REG_GZ_L:u8 = 0x03f;
+const _REG_GZ_H:u8 = 0x040;
+
+
+const GYRO_ODR_7172_P_4_HZ: u8 = 0b_0000_0000;
+const GYRO_ODR_3587_P_2_HZ: u8 = 0b_0000_0001;
+const GYRO_ODR_1793_P_6_HZ: u8 = 0b_0000_0010;
+const GYRO_ODR_896_P_8_HZ: u8 = 0b_0000_0011;
+const GYRO_ODR_448_P_4_HZ: u8 = 0b_0000_0100;
+const GYRO_ODR_224_P_2_HZ: u8 = 0b_0000_0101;
+const GYRO_ODR_112_P_1_HZ: u8 = 0b_0000_0110;
+const GYRO_ODR_56_P_05_HZ: u8 = 0b_0000_0111;
+const GYRO_ODR_28_P_025_HZ: u8 = 0b_0000_1000;
+
+const GYRO_RANGE_2048_DPS: u8 = 0b_0110_0000;
+const GYRO_RANGE_1024_DPS: u8 = 0b_0110_0000;
+const GYRO_RANGE_512_DPS: u8 = 0b_0101_0000;
+const GYRO_RANGE_256_DPS: u8 = 0b_0100_0000;
+const GYRO_RANGE_128_DPS: u8 = 0b_0011_0000;
+const _GYRO_RANGE_64_DPS: u8 = 0b_0010_0000;
+const _GYRO_RANGE_32_DPS: u8 = 0b_0001_0000;
+const _GYRO_RANGE_16_DPS: u8 = 0b_0000_0000;
+
+const ACC_ODR_7172_P_4_HZ: u8 = 0b_0000_0000;
+const ACC_ODR_3587_P_2_HZ: u8 = 0b_0000_0001;
+const ACC_ODR_1793_P_6_HZ: u8 = 0b_0000_0010;
+const ACC_ODR_896_P_8_HZ: u8 = 0b_0000_0011;
+const ACC_ODR_448_P_4_HZ: u8 = 0b_0000_0100;
+const ACC_ODR_224_P_2_HZ: u8 = 0b_0000_0101;
+const ACC_ODR_112_P_1_HZ: u8 = 0b_0000_0110;
+const ACC_ODR_56_P_05_HZ: u8 = 0b_0000_0111;
+const ACC_ODR_28_P_025_HZ: u8 = 0b_0000_1000;
+
+const ACCEL_RANGE_16G: u8 = 0b_0011_0000;
+const ACCEL_RANGE_8G: u8 = 0b_0010_0000;
+const ACCEL_RANGE_4G: u8 = 0b_0001_0000;
+const ACCEL_RANGE_2G: u8 = 0b_0000_0000;
+
+pub struct Qmi8658a<B: ImuBus> {
+    pub bus: B,
+    pub common: ImuCommon,
+    pub config: ImuConfig,
+}
+
+impl<B: ImuBus> Imu for Qmi8658a<B> {
+    type Bus = B;
+    type Error = <B as ImuBus>::Error;
+
+    fn bus(&mut self) -> &mut Self::Bus {
+        &mut self.bus
+    }
+
+    fn common(&self) -> &ImuCommon {
+        &self.common
+    }
+
+    fn common_mut(&mut self) -> &mut ImuCommon {
+        &mut self.common
+    }
+
+    fn config(&self) -> &ImuConfig {
+        &self.config
+    }
+
+    async fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
+        // On the Pico, I2C write_read is natively async.
+        // We just delegate the call and .await the result.
+        self.bus.bus_write_read(address, write, read).await
+    }
+
+    async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 6];
+        self.write_read(I2C_ADDRESS, &[REG_AX_L], &mut buf).await?;
+        Ok(self.map_gyro_rps(buf, self.common.axis_order))
+    }
+
+    async fn read_gyro_rps(&mut self) -> Result<Vector3df32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 6];
+        self.write_read(I2C_ADDRESS, &[REG_GX_L], &mut buf).await?;
+        //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
+        Ok(self.map_gyro_rps(buf, self.common.axis_order))
+    }
+
+    async fn read_gyro_dps(&mut self) -> Result<Vector3df32, Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 6];
+        self.write_read(I2C_ADDRESS, &[REG_GX_L], &mut buf).await?;
+        //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
+        Ok(self.map_gyro_dps(buf, self.common.axis_order))
+    }
+
+    async fn read_acc_gyro_rps(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 12];
+        self.write_read(I2C_ADDRESS, &[REG_AX_L], &mut buf).await?;
+        Ok(self.map_acc_gyro_rps(buf, self.common.axis_order))
+    }
+}
+
+fn delay_ms(_delay: u32) {}
+
+impl<B: ImuBus> Qmi8658a<B> {
+    pub const MAX_SPI_FREQUENCY_HZ:u32 = 15_000_000;
+    const DEVICE_ID: u8 = 0;
+
+    pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
+        Self {
+            bus,
+            common: ImuCommon::new(axis_order),
+            config: ImuConfig {
+                gyro_id_msp: ImuConfig::MSP_GYRO_ID_DEFAULT,
+                acc_id_msp: ImuConfig::MSP_ACC_ID_DEFAULT,
+                axis_order: axis_order.into(),
+                device_id: Self::DEVICE_ID,
+                address: I2C_ADDRESS,
+                flags: 0,
+            },
+        }
+    }
+
+    /// # Errors
+    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+        self.bus.read_register(self.config.address, reg).await
+    }
+
+    /// # Errors
+    pub async fn init(
+        &mut self,
+        target_output_data_rate_hz: u32,
+        gyro_sensitivity: u8,
+        acc_sensitivity: u8,
+    ) -> Result<(u32, u32), B::Error> {
+
+        // CTRL1
+        // auto increment required for burst mode reading, ie for ACC an GYRO registers
+        const ADDRESS_AUTO_INCREMENT:u8 = 0b_0100_0000;
+        const _BIG_ENDIAN:u8 = 0b_0010_0000;
+        const _INT1_ENABLE:u8 = 0b_0001_0000;
+        // Data ready (DRDY) is signalled on the INT2 pin.
+        const INT2_ENABLE:u8 = 0b_0000_1000;
+
+        // CTRL7
+        const GYRO_ENABLE:u8 = 0b_0000_0010;
+        const ACC_ENABLE:u8 = 0b_0000_0001;
+
+        // soft RESET
+        self.bus.write_register(self.config.address, REG_RESET, 0x0b).await?;
+        // soft reset takes a maximum of 15ms
+        delay_ms(15); 
+
+        // REG_CTRL1
+        self.bus.write_register(self.config.address, REG_CTRL1, ADDRESS_AUTO_INCREMENT | INT2_ENABLE).await?;
+        delay_ms(1);
+
+        // REG_CTRL2
+        let acc_register_value = self.calculate_acc_odr(target_output_data_rate_hz, acc_sensitivity);
+        self.bus.write_register(self.config.address, REG_CTRL2, acc_register_value).await?;
+        delay_ms(1);
+
+        // REG_CTRL3
+        let gyro_register_value = self.calculate_gyro_odr(target_output_data_rate_hz, gyro_sensitivity);
+        self.bus.write_register(self.config.address, REG_CTRL3, gyro_register_value).await?;
+        delay_ms(1);
+
+        // No REG_CTRL4
+        // REG_CTRL5 is LPF filters - leave all off
+        // No REG_CTRL6
+
+        // REG_CTRL7, DRDY is enabled by default, sets INT2 pin high
+        self.bus.write_register(self.config.address, REG_CTRL7, GYRO_ENABLE|ACC_ENABLE).await?;
+        delay_ms(1);
+        // REG_CTRL8 is motion detection - leave all off
+
+        // return the gyro and acc sample rates actually set
+        Ok((self.common.gyro_sample_rate_hz, self.common.acc_sample_rate_hz))
+    }
+
+    pub fn calculate_gyro_odr(&mut self, target_output_data_rate_hz: u32, gyro_sensitivity: u8) -> u8 {
+        // calculate the GYRO_ODR bit values to write to the REG_GYRO_CONFIG0 register
+
+        let (gyro_odr, gyro_sample_rate_hz) = match target_output_data_rate_hz {
+            1794..=3587 => (GYRO_ODR_3587_P_2_HZ, 3587),
+            897..=1793 => (GYRO_ODR_1793_P_6_HZ, 1793),
+            449..=896 => (GYRO_ODR_896_P_8_HZ, 896),
+            225..=448 => (GYRO_ODR_448_P_4_HZ, 448),
+            113..=224 => (GYRO_ODR_224_P_2_HZ, 224),
+            57..=112 => (GYRO_ODR_112_P_1_HZ, 112),
+            29..=56 => (GYRO_ODR_56_P_05_HZ, 556),
+            1..=28 => (GYRO_ODR_28_P_025_HZ, 28),
+            _ => (GYRO_ODR_7172_P_4_HZ, 7172),
+        };
+        self.common.gyro_sample_rate_hz = gyro_sample_rate_hz;
+
+        // calculate the GYRO_RANGE bit values to write to the REG_GYRO_CONFIG0 register
+        let (gyro_scale_dps, gyro_register_value) = match gyro_sensitivity {
+            ImuCommon::GYRO_FULL_SCALE_125_DPS => (128.0, GYRO_RANGE_128_DPS),
+            ImuCommon::GYRO_FULL_SCALE_250_DPS => (256.0, GYRO_RANGE_256_DPS),
+            ImuCommon::GYRO_FULL_SCALE_500_DPS => (512.0, GYRO_RANGE_512_DPS),
+            ImuCommon::GYRO_FULL_SCALE_1000_DPS => (1024.0, GYRO_RANGE_1024_DPS),
+            _ => (2048.0, GYRO_RANGE_2048_DPS),
+        };
+        self.common.gyro_scale_dps = gyro_scale_dps / 32768.0;
+        self.common.gyro_scale_rps = self.common.gyro_scale_dps.to_radians();
+
+
+        gyro_register_value | gyro_odr
+    }
+
+    pub fn calculate_acc_odr(&mut self, target_output_data_rate_hz: u32, acc_sensitivity: u8) -> u8 {
+        let (acc_odr, acc_sample_rate_hz) = match target_output_data_rate_hz {
+            1794..=3587 => (ACC_ODR_3587_P_2_HZ, 3587),
+            897..=1793 => (ACC_ODR_1793_P_6_HZ, 1793),
+            449..=896 => (ACC_ODR_896_P_8_HZ, 896),
+            225..=448 => (ACC_ODR_448_P_4_HZ, 448),
+            113..=224 => (ACC_ODR_224_P_2_HZ, 224),
+            57..=112 => (ACC_ODR_112_P_1_HZ, 112),
+            29..=56 => (ACC_ODR_56_P_05_HZ, 556),
+            1..=28 => (ACC_ODR_28_P_025_HZ, 28),
+            _ => (ACC_ODR_7172_P_4_HZ, 7172),
+        };
+        self.common.acc_sample_rate_hz = acc_sample_rate_hz;
+
+        // calculate the ACCEL_ODR bit values to write to the REG_ACCEL_CONFIG0 register
+        let (acc_scale, acc_register_value) = match acc_sensitivity {
+            ImuCommon::ACC_FULL_SCALE_2G => (2.0, ACCEL_RANGE_2G),
+            ImuCommon::ACC_FULL_SCALE_4G => (4.0, ACCEL_RANGE_4G),
+            ImuCommon::ACC_FULL_SCALE_8G => (8.0, ACCEL_RANGE_8G),
+            _ => {
+                // default includes  ImuCommon::ACC_FULL_SCALE_16G
+                (16.0, ACCEL_RANGE_16G)
+            }
+        };
+        self.common.acc_scale = acc_scale / 32768.0;
+
+        acc_register_value | acc_odr
+    }
+
+    pub fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let acc16 = Vector3di16 {
+            x: i16::from_le_bytes([buf[0], buf[1]]),
+            y: i16::from_le_bytes([buf[2], buf[3]]),
+            z: i16::from_le_bytes([buf[4], buf[5]]),
+        };
+        let acc = Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset;
+        ImuAxesOrder::map_vector(axis_order, &acc)
+    }
+
+    pub fn map_gyro_rps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let gyro16 = Vector3di16 {
+            x: i16::from_le_bytes([buf[0], buf[1]]),
+            y: i16::from_le_bytes([buf[2], buf[3]]),
+            z: i16::from_le_bytes([buf[4], buf[5]]),
+        };
+        let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
+        ImuAxesOrder::map_vector(axis_order, &gyro_rps)
+    }
+
+    pub fn map_gyro_dps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let gyro16 = Vector3di16 {
+            x: i16::from_le_bytes([buf[0], buf[1]]),
+            y: i16::from_le_bytes([buf[2], buf[3]]),
+            z: i16::from_le_bytes([buf[4], buf[5]]),
+        };
+        let gyro_dps = Vector3df32::from(gyro16) * self.common.gyro_scale_dps - self.common.gyro_offset_dps;
+        ImuAxesOrder::map_vector(axis_order, &gyro_dps)
+    }
+
+    pub fn map_acc_gyro_rps(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
+        let gyro16 = Vector3di16 {
+            x: i16::from_le_bytes([buf[0], buf[1]]),
+            y: i16::from_le_bytes([buf[2], buf[3]]),
+            z: i16::from_le_bytes([buf[4], buf[5]]),
+        };
+        let acc16 = Vector3di16 {
+            x: i16::from_le_bytes([buf[6], buf[7]]),
+            y: i16::from_le_bytes([buf[8], buf[9]]),
+            z: i16::from_le_bytes([buf[10], buf[11]]),
+        };
+
+        let acc = Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset;
+        let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
+
+        ImuAxesOrder::map_acc_gyro_rps(axis_order, acc, gyro_rps)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // we can do float comparisons because all floats have been converted from i16s, and so can be represented exactly.
+    #![allow(clippy::float_cmp)]
+    use super::*;
+    use crate::{ImuAxesOrder, MockImuBus};
+
+    fn is_normal<T: Sized + Send + Sync + Unpin>() {}
+
+    #[test]
+    fn normal_types() {
+        is_normal::<Qmi8658a<MockImuBus>>();
+    }
+    #[test]
+    fn imu_init() {
+        let imu_bus = MockImuBus::new();
+        let mut imu: Qmi8658a<MockImuBus> = Qmi8658a::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+
+        let result = pollster::block_on(imu.init(7172, ImuCommon::GYRO_FULL_SCALE_MAX, ImuCommon::ACC_FULL_SCALE_MAX));
+        let (gyro_odr, acc_odr) = result.unwrap();
+
+        assert_eq!(7172, gyro_odr);
+        assert_eq!(7172, acc_odr);
+        assert_eq!(2048.0 / 32768.0, imu.common.gyro_scale_dps);
+        assert_eq!(16.0 / 32768.0, imu.common.acc_scale);
+        assert_eq!(7172, imu.common.gyro_sample_rate_hz);
+        assert_eq!(7172, imu.common.acc_sample_rate_hz);
+    }
+    #[test]
+    fn map_acc() {
+        let imu_bus = MockImuBus::new();
+        let imu: Qmi8658a<MockImuBus> = Qmi8658a::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+
+        // TODO: sit down and work out some useful test data for this
+        let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
+        let acc = imu.map_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        assert_eq!(Vector3df32 { x: 0.0, y: 0.0, z: 0.0 }, acc);
+    }
+}

@@ -24,6 +24,7 @@ mod imu_mock;
 mod lsm6ds;
 mod mpu6050;
 mod mpu6886;
+mod qmi8658a;
 mod spi;
 
 pub use axes::ImuAxesOrder;
@@ -35,4 +36,5 @@ pub use imu426xx::Imu426xx;
 pub use lsm6ds::Lsm6ds;
 pub use mpu6050::Mpu6050;
 pub use mpu6886::Mpu6886;
+pub use qmi8658a::Qmi8658a;
 pub use spi::SpiInterface;
