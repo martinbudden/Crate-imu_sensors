@@ -15,6 +15,8 @@ Once the API has stabilized this project will adopt semantic versioning, the fir
 
 ### Changed
 
+- updated to `vqm` 0.1.5.
+
 ### Removed
 
 ### Deprecated
