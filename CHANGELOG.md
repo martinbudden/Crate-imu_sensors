@@ -15,8 +15,6 @@ Once the API has stabilized this project will adopt semantic versioning, the fir
 
 ### Changed
 
-- updated to `vqm` 0.1.5.
-
 ### Removed
 
 ### Deprecated
@@ -25,11 +23,23 @@ Once the API has stabilized this project will adopt semantic versioning, the fir
 
 ### Security
 
+## [0.1.2] - 2026-05-34
+
+### Added
+
+- QMI8658A driver.
+
+### Changed
+
+- updated to `vqm` 0.1.9.
+- made `serde` an optional feature.
+- Changed Apache license to standard unabridged text.
+
 ## [0.1.1] - 2026-05-10
 
 ### Added
 
-- ImuMock
+- `ImuMock`
 - `.markdownlint.json`
 
 ### Changed

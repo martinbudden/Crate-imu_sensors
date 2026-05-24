@@ -9,42 +9,41 @@ const _I2C_ADDRESS_ALTERNATIVE: u8 = 0x6B;
 // **** IMU Registers and associated bitflags ****
 
 const _REG_WHO_AM_I: u8 = 0x00;
-const _REG_REVISION_ID:u8 = 0x01;
-const REG_RESET:u8 =0x60;
+const _REG_REVISION_ID: u8 = 0x01;
+const REG_RESET: u8 = 0x60;
 
-const REG_CTRL1:u8 = 0x02;
-const REG_CTRL2:u8 = 0x03;
-const REG_CTRL3:u8 = 0x04;
-const _REG_CTRL5:u8 = 0x06;
-const REG_CTRL7:u8 = 0x08;
-const _REG_CTRL8:u8 = 0x09;
-const _REG_CTRL9:u8 = 0x0a;
+const REG_CTRL1: u8 = 0x02;
+const REG_CTRL2: u8 = 0x03;
+const REG_CTRL3: u8 = 0x04;
+const _REG_CTRL5: u8 = 0x06;
+const REG_CTRL7: u8 = 0x08;
+const _REG_CTRL8: u8 = 0x09;
+const _REG_CTRL9: u8 = 0x0a;
 
-const _REG_CAL1_L:u8 = 0x0b;
-const _REG_CAL1_H:u8 = 0x0c;
-const _REG_CAL2_L:u8 = 0x0d;
-const _REG_CAL2_H:u8 = 0x0e;
-const _REG_CAL3_L:u8 = 0x0f;
-const _REG_CAL3_H:u8 = 0x10;
-const _REG_CAL4_L:u8 = 0x11;
-const _REG_CAL4_H:u8 = 0x12;
+const _REG_CAL1_L: u8 = 0x0b;
+const _REG_CAL1_H: u8 = 0x0c;
+const _REG_CAL2_L: u8 = 0x0d;
+const _REG_CAL2_H: u8 = 0x0e;
+const _REG_CAL3_L: u8 = 0x0f;
+const _REG_CAL3_H: u8 = 0x10;
+const _REG_CAL4_L: u8 = 0x11;
+const _REG_CAL4_H: u8 = 0x12;
 
-const _REG_TEMP_L:u8 = 0x033;
-const _REG_TEMP_H:u8 = 0x034;
-const REG_AX_L:u8 = 0x035;
-const _REG_AX_H:u8 = 0x036;
-const _REG_AY_L:u8 = 0x037;
-const _REG_AY_H:u8 = 0x038;
-const _REG_AZ_L:u8 = 0x039;
-const _REG_AZ_H:u8 = 0x031;
+const _REG_TEMP_L: u8 = 0x033;
+const _REG_TEMP_H: u8 = 0x034;
+const REG_AX_L: u8 = 0x035;
+const _REG_AX_H: u8 = 0x036;
+const _REG_AY_L: u8 = 0x037;
+const _REG_AY_H: u8 = 0x038;
+const _REG_AZ_L: u8 = 0x039;
+const _REG_AZ_H: u8 = 0x031;
 
-const REG_GX_L:u8 = 0x03B;
-const _REG_GX_H:u8 = 0x03c;
-const _REG_GY_L:u8 = 0x03d;
-const _REG_GY_H:u8 = 0x03e;
-const _REG_GZ_L:u8 = 0x03f;
-const _REG_GZ_H:u8 = 0x040;
-
+const REG_GX_L: u8 = 0x03B;
+const _REG_GX_H: u8 = 0x03c;
+const _REG_GY_L: u8 = 0x03d;
+const _REG_GY_H: u8 = 0x03e;
+const _REG_GZ_L: u8 = 0x03f;
+const _REG_GZ_H: u8 = 0x040;
 
 const GYRO_ODR_7172_P_4_HZ: u8 = 0b_0000_0000;
 const GYRO_ODR_3587_P_2_HZ: u8 = 0b_0000_0001;
@@ -154,7 +153,7 @@ impl<B: ImuBus> Imu for Qmi8658a<B> {
 fn delay_ms(_delay: u32) {}
 
 impl<B: ImuBus> Qmi8658a<B> {
-    pub const MAX_SPI_FREQUENCY_HZ:u32 = 15_000_000;
+    pub const MAX_SPI_FREQUENCY_HZ: u32 = 15_000_000;
     const DEVICE_ID: u8 = 0;
 
     pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
@@ -184,23 +183,22 @@ impl<B: ImuBus> Qmi8658a<B> {
         gyro_sensitivity: u8,
         acc_sensitivity: u8,
     ) -> Result<(u32, u32), B::Error> {
-
         // CTRL1
         // auto increment required for burst mode reading, ie for ACC an GYRO registers
-        const ADDRESS_AUTO_INCREMENT:u8 = 0b_0100_0000;
-        const _BIG_ENDIAN:u8 = 0b_0010_0000;
-        const _INT1_ENABLE:u8 = 0b_0001_0000;
+        const ADDRESS_AUTO_INCREMENT: u8 = 0b_0100_0000;
+        const _BIG_ENDIAN: u8 = 0b_0010_0000;
+        const _INT1_ENABLE: u8 = 0b_0001_0000;
         // Data ready (DRDY) is signalled on the INT2 pin.
-        const INT2_ENABLE:u8 = 0b_0000_1000;
+        const INT2_ENABLE: u8 = 0b_0000_1000;
 
         // CTRL7
-        const GYRO_ENABLE:u8 = 0b_0000_0010;
-        const ACC_ENABLE:u8 = 0b_0000_0001;
+        const GYRO_ENABLE: u8 = 0b_0000_0010;
+        const ACC_ENABLE: u8 = 0b_0000_0001;
 
         // soft RESET
         self.bus.write_register(self.config.address, REG_RESET, 0x0b).await?;
         // soft reset takes a maximum of 15ms
-        delay_ms(15); 
+        delay_ms(15);
 
         // REG_CTRL1
         self.bus.write_register(self.config.address, REG_CTRL1, ADDRESS_AUTO_INCREMENT | INT2_ENABLE).await?;
@@ -221,7 +219,7 @@ impl<B: ImuBus> Qmi8658a<B> {
         // No REG_CTRL6
 
         // REG_CTRL7, DRDY is enabled by default, sets INT2 pin high
-        self.bus.write_register(self.config.address, REG_CTRL7, GYRO_ENABLE|ACC_ENABLE).await?;
+        self.bus.write_register(self.config.address, REG_CTRL7, GYRO_ENABLE | ACC_ENABLE).await?;
         delay_ms(1);
         // REG_CTRL8 is motion detection - leave all off
 
@@ -255,7 +253,6 @@ impl<B: ImuBus> Qmi8658a<B> {
         };
         self.common.gyro_scale_dps = gyro_scale_dps / 32768.0;
         self.common.gyro_scale_rps = self.common.gyro_scale_dps.to_radians();
-
 
         gyro_register_value | gyro_odr
     }
