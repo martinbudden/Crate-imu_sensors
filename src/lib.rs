@@ -12,6 +12,10 @@
 #![allow(clippy::must_use_candidate)]
 #![allow(clippy::doc_markdown)]
 
+// Enable standard library only if the 'std' feature is explicitly active
+#[cfg(feature = "std")]
+extern crate std;
+
 #[cfg(all(feature = "i2c", feature = "spi"))]
 compile_error!("Features 'i2c' and 'spi' are mutually exclusive and cannot be enabled together.");
 

@@ -2,7 +2,7 @@ use vqm::Vector3df32;
 
 //use cfg_if::cfg_if;
 use num_enum::{FromPrimitive, IntoPrimitive};
-use strum_macros::EnumIter;
+use strum::EnumIter;
 
 #[allow(non_camel_case_types)]
 #[repr(u8)]

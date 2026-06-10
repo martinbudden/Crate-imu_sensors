@@ -1,5 +1,8 @@
 #[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use {
+    sequential_storage::map::PostcardValue,
+    serde::{Deserialize, Serialize},
+};
 
 use crate::{ImuAxesOrder, ImuBus};
 use vqm::Vector3df32;
@@ -69,6 +72,9 @@ pub struct ImuConfig {
     pub axis_order: u8,
     pub flags: u8, // Flags for describing IMU characteristics
 }
+
+#[cfg(feature = "serde")]
+impl PostcardValue<'_> for ImuConfig {}
 
 impl Default for ImuConfig {
     fn default() -> Self {
@@ -208,10 +214,7 @@ mod tests {
     fn is_normal<T: Sized + Send + Sync + Unpin>() {}
     fn is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
     #[cfg(feature = "serde")]
-    fn is_config<
-        T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq + Serialize + for<'a> Deserialize<'a>,
-    >() {
-    }
+    fn is_config<T: Serialize + for<'a> Deserialize<'a>>() {}
 
     #[test]
     fn normal_types() {

@@ -13,7 +13,7 @@ const _REG_FUNC_CFG_ACCESS: u8 = 0x01;
 const _REG_RESERVED_03: u8 = 0x03;
 
 cfg_if! {
-if #[cfg(feature = "lsmds63tr_c")] {
+if #[cfg(feature = "lsm6ds3tr_c")] {
 const REG_RESERVED_02: u8 = 0x02;
 const REG_SENSOR_SYNC_TIME_FRAME: u8 = 0x04;
 const REG_SENSOR_SYNC_RES_RATIO: u8 = 0x05;
@@ -236,7 +236,6 @@ impl<B: ImuBus> Lsm6ds<B> {
     }
 
     /// # Errors
-    #[allow(clippy::too_many_lines)]
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
