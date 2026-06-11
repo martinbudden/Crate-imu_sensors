@@ -175,7 +175,7 @@ pub trait Imu {
     fn config(&self) -> &ImuConfig;
 
     #[allow(async_fn_in_trait)]
-    async fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error>;
+    async fn write_read(&mut self, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error>;
 
     #[allow(async_fn_in_trait)]
     async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>;

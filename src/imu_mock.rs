@@ -43,8 +43,8 @@ impl<B: ImuBus> Imu for ImuMock<B> {
         &self.config
     }
 
-    async fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
-        self.bus.bus_write_read(address, write, read).await
+    async fn write_read(&mut self, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
+        self.bus.bus_write_read(self.config.address, write, read).await
     }
 
     async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>

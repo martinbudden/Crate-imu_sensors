@@ -166,10 +166,10 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
         &self.config
     }
 
-    async fn write_read(&mut self, _address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
+    async fn write_read(&mut self, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
         // On the Pico, I2C write_read is natively async.
         // We just delegate the call and .await the result.
-        self.bus.bus_write_read(self.config.device_id, write, read).await
+        self.bus.bus_write_read(self.config.address, write, read).await
     }
 
     async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>
@@ -177,7 +177,7 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
         <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
     {
         let mut buf = [0u8; 6];
-        self.write_read(I2C_ADDRESS, &[REG_OUTX_L_ACC], &mut buf).await?;
+        self.write_read(&[REG_OUTX_L_ACC], &mut buf).await?;
         Ok(self.map_gyro_rps(buf, self.common.axis_order))
     }
 
@@ -186,7 +186,7 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
         <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
     {
         let mut buf = [0u8; 6];
-        self.write_read(I2C_ADDRESS, &[REG_OUTX_L_G], &mut buf).await?;
+        self.write_read(&[REG_OUTX_L_G], &mut buf).await?;
         //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
         Ok(self.map_gyro_dps(buf, self.common.axis_order))
     }
@@ -196,7 +196,7 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
         <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
     {
         let mut buf = [0u8; 12];
-        self.write_read(I2C_ADDRESS, &[REG_OUTX_L_G], &mut buf).await?;
+        self.write_read(&[REG_OUTX_L_G], &mut buf).await?;
         Ok(self.map_acc_gyro_rps(buf, self.common.axis_order))
     }
 
@@ -205,7 +205,7 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
         <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
     {
         let mut buf = [0u8; 12];
-        self.write_read(I2C_ADDRESS, &[REG_OUTX_L_G], &mut buf).await?;
+        self.write_read(&[REG_OUTX_L_G], &mut buf).await?;
         Ok(self.map_acc_mps2_gyro_rps(buf, self.common.axis_order))
     }
 }

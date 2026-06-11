@@ -24,8 +24,14 @@ rustc_version = "0.4.1"
 
 [features]
 # Platform Profiles
-default = ["libm", "rp2350", "spi"]
-std = ["embassy-time/std", "embassy-time/generic-queue-8", "embassy-executor/platform-std", "vqm/std"]
+default = ["libm", "spi"]
+std = [
+    "embassy-executor",
+    "embassy-executor/platform-std",
+    "embassy-time/std", 
+    "embassy-time/generic-queue-8",     
+    "vqm/std"
+]
 
 # Middleware & Core Math
 libm = ["dep:libm", "vqm/libm"]
@@ -68,9 +74,9 @@ embassy-stm32 = { version = "0.6.0", default-features = false, features = ["stm3
 esp-idf-hal = { version = "0.46.2", default-features = false, optional = true }
 
 # General Embassy HAL (Marked optional = true to support the 'std' feature mapping)
-embassy-time = { version = "0.5.1", default-features = false, features = ["generic-queue-8"] }
 embassy-executor = { version = "0.10.0", default-features = false, features = ["executor-thread"], optional = true }
 embassy-sync = { version = "0.8.0", default-features = false }
+embassy-time = { version = "0.5.1", default-features = false, features = ["generic-queue-8"] }
 
 # Use embedded-hal for I2C/SPI traits
 embedded-hal = { version = "1.0.0", default-features = false }
@@ -86,4 +92,3 @@ esp-println = { version = "0.17.0", features = ["log-04"], optional = true }
 # --- DEV DEPENDENCIES (Only compiled for examples / tests) ---
 [dev-dependencies]
 pollster = { version = "0.4.0", default-features = false }
-embassy-executor = { version = "0.10.0", features = ["platform-std"] }
