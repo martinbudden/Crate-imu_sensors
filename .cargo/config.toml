@@ -10,4 +10,13 @@ rustflags = [
 ]
 
 [fallback]
-# Tells cargo to use the host architecture when running tests or benches
+
+# Tells cargo to use the host architecture when running tests or benches[alias]
+[env]
+# This cleanly sets the embassy task allocation memory size for all examples
+EMBASSY_EXECUTOR_TASK_ARENA_SIZE = "32768"
+
+[alias]
+# Run using: 'cargo test-host'
+test-host = "test --no-default-features --features std,libm --target x86_64-unknown-linux-gnu"
+

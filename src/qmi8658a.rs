@@ -1,5 +1,5 @@
-//#![allow(unused)]
-use vqm::{Vector3df32, Vector3di16};
+use embassy_time::{Duration, Timer};
+use vqm::Vector3df32;
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig};
 
@@ -120,16 +120,6 @@ impl<B: ImuBus> Imu for Qmi8658a<B> {
         Ok(self.map_gyro_rps(buf, self.common.axis_order))
     }
 
-    async fn read_gyro_rps(&mut self) -> Result<Vector3df32, Self::Error>
-    where
-        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
-    {
-        let mut buf = [0u8; 6];
-        self.write_read(I2C_ADDRESS, &[REG_GX_L], &mut buf).await?;
-        //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
-        Ok(self.map_gyro_rps(buf, self.common.axis_order))
-    }
-
     async fn read_gyro_dps(&mut self) -> Result<Vector3df32, Self::Error>
     where
         <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
@@ -148,9 +138,20 @@ impl<B: ImuBus> Imu for Qmi8658a<B> {
         self.write_read(I2C_ADDRESS, &[REG_AX_L], &mut buf).await?;
         Ok(self.map_acc_gyro_rps(buf, self.common.axis_order))
     }
+
+    async fn read_acc_mps2_gyro_rps(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 12];
+        self.write_read(I2C_ADDRESS, &[REG_AX_L], &mut buf).await?;
+        Ok(self.map_acc_mps2_gyro_rps(buf, self.common.axis_order))
+    }
 }
 
-fn delay_ms(_delay: u32) {}
+async fn delay_ms(delay: u32) {
+    Timer::after(Duration::from_millis(delay.into())).await;
+}
 
 impl<B: ImuBus> Qmi8658a<B> {
     pub const MAX_SPI_FREQUENCY_HZ: u32 = 15_000_000;
@@ -198,21 +199,21 @@ impl<B: ImuBus> Qmi8658a<B> {
         // soft RESET
         self.bus.write_register(self.config.address, REG_RESET, 0x0b).await?;
         // soft reset takes a maximum of 15ms
-        delay_ms(15);
+        delay_ms(15).await;
 
         // REG_CTRL1
         self.bus.write_register(self.config.address, REG_CTRL1, ADDRESS_AUTO_INCREMENT | INT2_ENABLE).await?;
-        delay_ms(1);
+        delay_ms(1).await;
 
         // REG_CTRL2
-        let acc_register_value = self.calculate_acc_odr(target_output_data_rate_hz, acc_sensitivity);
+        let acc_register_value = self.calculate_acc_scale_and_odr(acc_sensitivity, target_output_data_rate_hz);
         self.bus.write_register(self.config.address, REG_CTRL2, acc_register_value).await?;
-        delay_ms(1);
+        delay_ms(1).await;
 
         // REG_CTRL3
-        let gyro_register_value = self.calculate_gyro_odr(target_output_data_rate_hz, gyro_sensitivity);
+        let gyro_register_value = self.calculate_gyro_scale_and_odr(gyro_sensitivity, target_output_data_rate_hz);
         self.bus.write_register(self.config.address, REG_CTRL3, gyro_register_value).await?;
-        delay_ms(1);
+        delay_ms(1).await;
 
         // No REG_CTRL4
         // REG_CTRL5 is LPF filters - leave all off
@@ -220,30 +221,15 @@ impl<B: ImuBus> Qmi8658a<B> {
 
         // REG_CTRL7, DRDY is enabled by default, sets INT2 pin high
         self.bus.write_register(self.config.address, REG_CTRL7, GYRO_ENABLE | ACC_ENABLE).await?;
-        delay_ms(1);
+        delay_ms(1).await;
         // REG_CTRL8 is motion detection - leave all off
 
         // return the gyro and acc sample rates actually set
         Ok((self.common.gyro_sample_rate_hz, self.common.acc_sample_rate_hz))
     }
 
-    pub fn calculate_gyro_odr(&mut self, target_output_data_rate_hz: u32, gyro_sensitivity: u8) -> u8 {
+    pub fn calculate_gyro_scale_and_odr(&mut self, gyro_sensitivity: u8, target_output_data_rate_hz: u32) -> u8 {
         // calculate the GYRO_ODR bit values to write to the REG_GYRO_CONFIG0 register
-
-        let (gyro_odr, gyro_sample_rate_hz) = match target_output_data_rate_hz {
-            1794..=3587 => (GYRO_ODR_3587_P_2_HZ, 3587),
-            897..=1793 => (GYRO_ODR_1793_P_6_HZ, 1793),
-            449..=896 => (GYRO_ODR_896_P_8_HZ, 896),
-            225..=448 => (GYRO_ODR_448_P_4_HZ, 448),
-            113..=224 => (GYRO_ODR_224_P_2_HZ, 224),
-            57..=112 => (GYRO_ODR_112_P_1_HZ, 112),
-            29..=56 => (GYRO_ODR_56_P_05_HZ, 556),
-            1..=28 => (GYRO_ODR_28_P_025_HZ, 28),
-            _ => (GYRO_ODR_7172_P_4_HZ, 7172),
-        };
-        self.common.gyro_sample_rate_hz = gyro_sample_rate_hz;
-
-        // calculate the GYRO_RANGE bit values to write to the REG_GYRO_CONFIG0 register
         let (gyro_scale_dps, gyro_register_value) = match gyro_sensitivity {
             ImuCommon::GYRO_FULL_SCALE_125_DPS => (128.0, GYRO_RANGE_128_DPS),
             ImuCommon::GYRO_FULL_SCALE_250_DPS => (256.0, GYRO_RANGE_256_DPS),
@@ -254,84 +240,97 @@ impl<B: ImuBus> Qmi8658a<B> {
         self.common.gyro_scale_dps = gyro_scale_dps / 32768.0;
         self.common.gyro_scale_rps = self.common.gyro_scale_dps.to_radians();
 
+        let (gyro_sample_rate_hz, gyro_odr) = match target_output_data_rate_hz {
+            1794..=3587 => (3587, GYRO_ODR_3587_P_2_HZ),
+            897..=1793 => (1793, GYRO_ODR_1793_P_6_HZ),
+            449..=896 => (896, GYRO_ODR_896_P_8_HZ),
+            225..=448 => (448, GYRO_ODR_448_P_4_HZ),
+            113..=224 => (224, GYRO_ODR_224_P_2_HZ),
+            57..=112 => (112, GYRO_ODR_112_P_1_HZ),
+            29..=56 => (56, GYRO_ODR_56_P_05_HZ),
+            1..=28 => (28, GYRO_ODR_28_P_025_HZ),
+            _ => (7172, GYRO_ODR_7172_P_4_HZ),
+        };
+        self.common.gyro_sample_rate_hz = gyro_sample_rate_hz;
+
         gyro_register_value | gyro_odr
     }
 
-    pub fn calculate_acc_odr(&mut self, target_output_data_rate_hz: u32, acc_sensitivity: u8) -> u8 {
-        let (acc_odr, acc_sample_rate_hz) = match target_output_data_rate_hz {
-            1794..=3587 => (ACC_ODR_3587_P_2_HZ, 3587),
-            897..=1793 => (ACC_ODR_1793_P_6_HZ, 1793),
-            449..=896 => (ACC_ODR_896_P_8_HZ, 896),
-            225..=448 => (ACC_ODR_448_P_4_HZ, 448),
-            113..=224 => (ACC_ODR_224_P_2_HZ, 224),
-            57..=112 => (ACC_ODR_112_P_1_HZ, 112),
-            29..=56 => (ACC_ODR_56_P_05_HZ, 556),
-            1..=28 => (ACC_ODR_28_P_025_HZ, 28),
-            _ => (ACC_ODR_7172_P_4_HZ, 7172),
-        };
-        self.common.acc_sample_rate_hz = acc_sample_rate_hz;
-
+    pub fn calculate_acc_scale_and_odr(&mut self, acc_sensitivity: u8, target_output_data_rate_hz: u32) -> u8 {
         // calculate the ACCEL_ODR bit values to write to the REG_ACCEL_CONFIG0 register
         let (acc_scale, acc_register_value) = match acc_sensitivity {
-            ImuCommon::ACC_FULL_SCALE_2G => (2.0, ACCEL_RANGE_2G),
-            ImuCommon::ACC_FULL_SCALE_4G => (4.0, ACCEL_RANGE_4G),
-            ImuCommon::ACC_FULL_SCALE_8G => (8.0, ACCEL_RANGE_8G),
+            ImuCommon::ACC_FULL_SCALE_2G => (2.0 / 32768.0, ACCEL_RANGE_2G),
+            ImuCommon::ACC_FULL_SCALE_4G => (4.0 / 32768.0, ACCEL_RANGE_4G),
+            ImuCommon::ACC_FULL_SCALE_8G => (8.0 / 32768.0, ACCEL_RANGE_8G),
             _ => {
                 // default includes  ImuCommon::ACC_FULL_SCALE_16G
-                (16.0, ACCEL_RANGE_16G)
+                (16.0 / 32768.0, ACCEL_RANGE_16G)
             }
         };
-        self.common.acc_scale = acc_scale / 32768.0;
+        self.common.acc_scale = acc_scale;
+        self.common.acc_scale_mps2 = acc_scale * ImuCommon::G0;
+
+        let (acc_sample_rate_hz, acc_odr) = match target_output_data_rate_hz {
+            1794..=3587 => (3587, ACC_ODR_3587_P_2_HZ),
+            897..=1793 => (1793, ACC_ODR_1793_P_6_HZ),
+            449..=896 => (896, ACC_ODR_896_P_8_HZ),
+            225..=448 => (448, ACC_ODR_448_P_4_HZ),
+            113..=224 => (224, ACC_ODR_224_P_2_HZ),
+            57..=112 => (112, ACC_ODR_112_P_1_HZ),
+            29..=56 => (56, ACC_ODR_56_P_05_HZ),
+            1..=28 => (28, ACC_ODR_28_P_025_HZ),
+            _ => (7172, ACC_ODR_7172_P_4_HZ),
+        };
+        self.common.acc_sample_rate_hz = acc_sample_rate_hz;
 
         acc_register_value | acc_odr
     }
 
     pub fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
-        let acc16 = Vector3di16 {
-            x: i16::from_le_bytes([buf[0], buf[1]]),
-            y: i16::from_le_bytes([buf[2], buf[3]]),
-            z: i16::from_le_bytes([buf[4], buf[5]]),
-        };
-        let acc = Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset;
-        ImuAxesOrder::map_vector(axis_order, &acc)
+        let acc = Vector3df32::from_le_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
+        ImuAxesOrder::map_vector(axis_order, acc)
     }
 
-    pub fn map_gyro_rps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
-        let gyro16 = Vector3di16 {
-            x: i16::from_le_bytes([buf[0], buf[1]]),
-            y: i16::from_le_bytes([buf[2], buf[3]]),
-            z: i16::from_le_bytes([buf[4], buf[5]]),
-        };
-        let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
-        ImuAxesOrder::map_vector(axis_order, &gyro_rps)
+    #[inline]
+    pub fn map_acc_mps2(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let acc = Vector3df32::from_le_bytes_6(buf) * self.common.acc_scale_mps2 - self.common.acc_offset_mps2;
+        ImuAxesOrder::map_vector(axis_order, acc)
     }
 
+    #[inline]
     pub fn map_gyro_dps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
-        let gyro16 = Vector3di16 {
-            x: i16::from_le_bytes([buf[0], buf[1]]),
-            y: i16::from_le_bytes([buf[2], buf[3]]),
-            z: i16::from_le_bytes([buf[4], buf[5]]),
-        };
-        let gyro_dps = Vector3df32::from(gyro16) * self.common.gyro_scale_dps - self.common.gyro_offset_dps;
-        ImuAxesOrder::map_vector(axis_order, &gyro_dps)
+        let gyro_dps = Vector3df32::from_le_bytes_6(buf) * self.common.gyro_scale_dps - self.common.gyro_offset_dps;
+        ImuAxesOrder::map_vector(axis_order, gyro_dps)
     }
 
+    #[inline]
+    pub fn map_gyro_rps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let gyro_rps = Vector3df32::from_le_bytes_6(buf) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
+        ImuAxesOrder::map_vector(axis_order, gyro_rps)
+    }
+
+    #[inline]
     pub fn map_acc_gyro_rps(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
-        let gyro16 = Vector3di16 {
-            x: i16::from_le_bytes([buf[0], buf[1]]),
-            y: i16::from_le_bytes([buf[2], buf[3]]),
-            z: i16::from_le_bytes([buf[4], buf[5]]),
-        };
-        let acc16 = Vector3di16 {
-            x: i16::from_le_bytes([buf[6], buf[7]]),
-            y: i16::from_le_bytes([buf[8], buf[9]]),
-            z: i16::from_le_bytes([buf[10], buf[11]]),
-        };
+        let acc_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
+        let gyro_buf = [buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]];
 
-        let acc = Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset;
-        let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
+        let acc = Vector3df32::from_le_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
+        let gyro_rps =
+            Vector3df32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
 
-        ImuAxesOrder::map_acc_gyro_rps(axis_order, acc, gyro_rps)
+        ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro_rps)
+    }
+
+    #[inline]
+    pub fn map_acc_mps2_gyro_rps(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
+        let acc_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
+        let gyro_buf = [buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]];
+
+        let acc_mps2 = Vector3df32::from_le_bytes_6(acc_buf) * self.common.acc_scale_mps2 - self.common.acc_offset_mps2;
+        let gyro_rps =
+            Vector3df32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
+
+        ImuAxesOrder::map_acc_gyro(axis_order, acc_mps2, gyro_rps)
     }
 }
 

@@ -1,4 +1,5 @@
-use vqm::{Vector3df32, Vector3di16};
+use embassy_time::{Duration, Timer};
+use vqm::Vector3df32;
 
 use crate::{Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig};
 
@@ -124,16 +125,6 @@ impl<B: ImuBus> Imu for Mpu6050<B> {
         Ok(self.map_gyro_rps(buf, self.common.axis_order))
     }
 
-    async fn read_gyro_rps(&mut self) -> Result<Vector3df32, Self::Error>
-    where
-        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
-    {
-        let mut buf = [0u8; 6];
-        self.write_read(I2C_ADDRESS, &[REG_GYRO_XOUT_H], &mut buf).await?;
-        //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
-        Ok(self.map_gyro_rps(buf, self.common.axis_order))
-    }
-
     async fn read_gyro_dps(&mut self) -> Result<Vector3df32, Self::Error>
     where
         <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
@@ -152,9 +143,20 @@ impl<B: ImuBus> Imu for Mpu6050<B> {
         self.write_read(I2C_ADDRESS, &[REG_GYRO_XOUT_H], &mut buf).await?;
         Ok(self.map_acc_gyro_rps(buf, self.common.axis_order))
     }
+
+    async fn read_acc_mps2_gyro_rps(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>
+    where
+        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
+    {
+        let mut buf = [0u8; 14];
+        self.write_read(I2C_ADDRESS, &[REG_GYRO_XOUT_H], &mut buf).await?;
+        Ok(self.map_acc_mps2_gyro_rps(buf, self.common.axis_order))
+    }
 }
 
-fn delay_ms(_delay: u32) {}
+async fn delay_ms(delay: u32) {
+    Timer::after(Duration::from_millis(delay.into())).await;
+}
 
 impl<B: ImuBus> Mpu6050<B> {
     const DEVICE_ID: u8 = 0x68;
@@ -188,9 +190,15 @@ impl<B: ImuBus> Mpu6050<B> {
     ) -> Result<(u8, u8), B::Error> {
         // clock source: PLL with Z axis gyro reference
         self.bus.write_register(self.config.address, REG_PWR_MGMT_1, CLKSEL_PLL_Z_AXIS_GYRO).await?;
-        delay_ms(15);
+        delay_ms(15).await;
         self.bus.write_register(self.config.address, REG_PWR_MGMT_2, 0x00).await?;
-        delay_ms(15);
+        delay_ms(15).await;
+
+        /*let id= self.common.bus.read_register(Self::REG_WHO_AM_I).await?;
+        if id != Self::DEVICE_ID {
+            return Err(Error::WrongDevice)
+        }
+        Ok(())*/
 
         // Configure interrupts
         self.bus
@@ -200,9 +208,9 @@ impl<B: ImuBus> Mpu6050<B> {
                 INT_LEVEL_ACTIVE_HIGH | INT_PUSH_PULL | INT_ENABLE_PULSE | INT_CLEAR_READ_ANY | FSYNCH_INT_DISABLE,
             )
             .await?;
-        delay_ms(15);
+        delay_ms(15).await;
         self.bus.write_register(self.config.address, REG_INT_ENABLE, DATA_READY_ENABLE).await?;
-        delay_ms(15);
+        delay_ms(15).await;
 
         // TODO: write _gyro_sample_rate_divider to appropriate register.
         let (_gyro_sample_rate_divider, gyro_sample_rate_hz) = match target_output_data_rate_hz {
@@ -217,86 +225,67 @@ impl<B: ImuBus> Mpu6050<B> {
         self.common.gyro_sample_rate_hz = gyro_sample_rate_hz;
         let (gyro_scale_dps, gyro_range) = match gyro_sensitivity {
             // full scale 125 not supported so use 250 instead.
-            ImuCommon::GYRO_FULL_SCALE_125_DPS | ImuCommon::GYRO_FULL_SCALE_250_DPS => (250.0, GYRO_RANGE_250_DPS),
-            ImuCommon::GYRO_FULL_SCALE_500_DPS => (500.0, GYRO_RANGE_500_DPS),
-            ImuCommon::GYRO_FULL_SCALE_1000_DPS => (1000.0, GYRO_RANGE_1000_DPS),
-            _ => (2000.0, GYRO_RANGE_2000_DPS),
+            ImuCommon::GYRO_FULL_SCALE_125_DPS | ImuCommon::GYRO_FULL_SCALE_250_DPS => {
+                (250.0 / 32768.0, GYRO_RANGE_250_DPS)
+            }
+            ImuCommon::GYRO_FULL_SCALE_500_DPS => (500.0 / 32768.0, GYRO_RANGE_500_DPS),
+            ImuCommon::GYRO_FULL_SCALE_1000_DPS => (1000.0 / 32768.0, GYRO_RANGE_1000_DPS),
+            _ => (2000.0 / 32768.0, GYRO_RANGE_2000_DPS),
         };
-        self.common.gyro_scale_dps = gyro_scale_dps / 32768.0;
+        self.common.gyro_scale_dps = gyro_scale_dps;
         self.common.gyro_scale_rps = self.common.gyro_scale_dps.to_radians();
 
         self.common.acc_sample_rate_hz = 1000;
         let (acc_scale, acc_range) = match acc_sensitivity {
-            ImuCommon::ACC_FULL_SCALE_2G => (2.0, ACCEL_RANGE_2G),
-            ImuCommon::ACC_FULL_SCALE_4G => (4.0, ACCEL_RANGE_4G),
-            ImuCommon::ACC_FULL_SCALE_8G => (8.0, ACCEL_RANGE_8G),
-            _ => (16.0, ACCEL_RANGE_16G),
+            ImuCommon::ACC_FULL_SCALE_2G => (2.0 / 32768.0, ACCEL_RANGE_2G),
+            ImuCommon::ACC_FULL_SCALE_4G => (4.0 / 32768.0, ACCEL_RANGE_4G),
+            ImuCommon::ACC_FULL_SCALE_8G => (8.0 / 32768.0, ACCEL_RANGE_8G),
+            _ => (16.0 / 32768.0, ACCEL_RANGE_16G),
         };
-        self.common.acc_scale = acc_scale / 32768.0;
+        self.common.acc_scale = acc_scale;
+        self.common.acc_scale_mps2 = acc_scale * ImuCommon::G0;
 
         Ok((gyro_range, acc_range))
     }
 
-    // NOTE: Not sure if this is the right place to put this code, but it "wanted" to go here.
-    // It just kept floating upward until it reached this point.
-    // And it makes it easily accessible from test code.
     pub fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
-        let acc16 = Vector3di16 {
-            x: i16::from_be_bytes([buf[0], buf[1]]),
-            y: i16::from_be_bytes([buf[2], buf[3]]),
-            z: i16::from_be_bytes([buf[4], buf[5]]),
-        };
-        let acc = Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset;
-        ImuAxesOrder::map_vector(axis_order, &acc)
-    }
-
-    pub fn map_gyro_rps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
-        let gyro16 = Vector3di16 {
-            x: i16::from_be_bytes([buf[0], buf[1]]),
-            y: i16::from_be_bytes([buf[2], buf[3]]),
-            z: i16::from_be_bytes([buf[4], buf[5]]),
-        };
-        let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
-        ImuAxesOrder::map_vector(axis_order, &gyro_rps)
+        let acc = Vector3df32::from_be_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
+        ImuAxesOrder::map_vector(axis_order, acc)
     }
 
     pub fn map_gyro_dps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
-        let gyro16 = Vector3di16 {
-            x: i16::from_be_bytes([buf[0], buf[1]]),
-            y: i16::from_be_bytes([buf[2], buf[3]]),
-            z: i16::from_be_bytes([buf[4], buf[5]]),
-        };
-        let gyro_dps = Vector3df32::from(gyro16) * self.common.gyro_scale_dps - self.common.gyro_offset_dps;
-        ImuAxesOrder::map_vector(axis_order, &gyro_dps)
+        let gyro_dps = Vector3df32::from_be_bytes_6(buf) * self.common.gyro_scale_dps - self.common.gyro_offset_dps;
+        ImuAxesOrder::map_vector(axis_order, gyro_dps)
+    }
+
+    pub fn map_gyro_rps(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let gyro_rps = Vector3df32::from_be_bytes_6(buf) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
+        ImuAxesOrder::map_vector(axis_order, gyro_rps)
     }
 
     pub fn map_acc_gyro_rps(&self, buf: [u8; 14], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
-        let acc16 = Vector3di16 {
-            x: i16::from_be_bytes([buf[0], buf[1]]),
-            y: i16::from_be_bytes([buf[2], buf[3]]),
-            z: i16::from_be_bytes([buf[4], buf[5]]),
-        };
+        let acc_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
         let _temperature = i16::from_be_bytes([buf[6], buf[7]]);
-        let gyro16 = Vector3di16 {
-            x: i16::from_be_bytes([buf[8], buf[9]]),
-            y: i16::from_be_bytes([buf[10], buf[11]]),
-            z: i16::from_be_bytes([buf[12], buf[13]]),
-        };
-        let acc = Vector3df32::from(acc16) * self.common.acc_scale - self.common.acc_offset;
-        let gyro_rps = Vector3df32::from(gyro16) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
-        // NOTE: this begs to be chained, but perhaps for another day
-        ImuAxesOrder::map_acc_gyro_rps(axis_order, acc, gyro_rps)
+        let gyro_buf = [buf[8], buf[9], buf[10], buf[11], buf[12], buf[13]];
+
+        let acc = Vector3df32::from_be_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
+        let gyro_rps =
+            Vector3df32::from_be_bytes_6(gyro_buf) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
+
+        ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro_rps)
     }
-    /*pub async fn init(&mut self) -> Result<(), Error> {
-        let id = self.common.bus.read_register(Self::REG_WHO_AM_I).await?;
-        if id != Self::DEVICE_ID {
-            return Err(Error::WrongDevice)
-        }
-        Ok(())
+    #[inline]
+    pub fn map_acc_mps2_gyro_rps(&self, buf: [u8; 14], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
+        let acc_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
+        let _temperature = i16::from_be_bytes([buf[6], buf[7]]);
+        let gyro_buf = [buf[8], buf[9], buf[10], buf[11], buf[12], buf[13]];
+
+        let acc_mps2 = Vector3df32::from_be_bytes_6(acc_buf) * self.common.acc_scale_mps2 - self.common.acc_offset_mps2;
+        let gyro_rps =
+            Vector3df32::from_be_bytes_6(gyro_buf) * self.common.gyro_scale_rps - self.common.gyro_offset_rps;
+
+        ImuAxesOrder::map_acc_gyro(axis_order, acc_mps2, gyro_rps)
     }
-    pub fn set_acc_scale(&mut self, scale: AccScale) {
-        self.common.bus.write_register(Self::REG_ACCEL_CONFIG, scale as u8).ok();
-    }*/
 }
 
 /*

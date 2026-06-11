@@ -32,8 +32,9 @@ mod qmi8658a;
 mod spi;
 
 pub use axes::ImuAxesOrder;
+#[cfg(feature = "i2c")]
 pub use i2c::I2cInterface;
-pub use imu::{AccScale, Imu, ImuCommon, ImuConfig};
+pub use imu::{Imu, ImuCommon, ImuConfig};
 pub use imu_bus::{ImuBus, MockImuBus, SetupError};
 pub use imu_mock::ImuMock;
 pub use imu426xx::Imu426xx;
@@ -41,4 +42,5 @@ pub use lsm6ds::Lsm6ds;
 pub use mpu6050::Mpu6050;
 pub use mpu6886::Mpu6886;
 pub use qmi8658a::Qmi8658a;
+#[cfg(feature = "spi")]
 pub use spi::SpiInterface;
