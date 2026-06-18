@@ -7,18 +7,28 @@ use {
 use crate::{ImuAxesOrder, ImuBus};
 use vqm::Vector3df32;
 
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum ImuAccScale {
+    #[default]
+    G,
+    Mps2,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum ImuGyroScale {
+    #[default]
+    Dps,
+    Rps,
+}
+
 // Shared data members
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ImuCommon {
     pub acc_offset: Vector3df32,
-    pub acc_offset_mps2: Vector3df32,
     pub acc_scale: f32,
-    pub acc_scale_mps2: f32,
 
-    pub gyro_offset_rps: Vector3df32,
-    pub gyro_offset_dps: Vector3df32,
-    pub gyro_scale_rps: f32,
-    pub gyro_scale_dps: f32,
+    pub gyro_offset: Vector3df32,
+    pub gyro_scale: f32,
 
     pub acc_sample_rate_hz: u32,
     pub gyro_sample_rate_hz: u32,
@@ -49,13 +59,9 @@ impl ImuCommon {
         const ACC_8G_RES: f32 = 8.0 / 32768.0;
         Self {
             acc_offset: Vector3df32::new(0.0, 0.0, 0.0),
-            acc_offset_mps2: Vector3df32::new(0.0, 0.0, 0.0),
             acc_scale: ACC_8G_RES,
-            acc_scale_mps2: ACC_8G_RES * Self::G0,
-            gyro_offset_rps: Vector3df32::new(0.0, 0.0, 0.0),
-            gyro_offset_dps: Vector3df32::new(0.0, 0.0, 0.0),
-            gyro_scale_dps: GYRO_2000DPS_RES,
-            gyro_scale_rps: GYRO_2000DPS_RES.to_radians(),
+            gyro_offset: Vector3df32::new(0.0, 0.0, 0.0),
+            gyro_scale: GYRO_2000DPS_RES,
             gyro_sample_rate_hz: 1000,
             acc_sample_rate_hz: 1000,
             axis_order,
@@ -181,13 +187,10 @@ pub trait Imu {
     async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>;
 
     #[allow(async_fn_in_trait)]
-    async fn read_gyro_dps(&mut self) -> Result<Vector3df32, Self::Error>;
+    async fn read_gyro(&mut self) -> Result<Vector3df32, Self::Error>;
 
     #[allow(async_fn_in_trait)]
-    async fn read_acc_gyro_rps(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>;
-
-    #[allow(async_fn_in_trait)]
-    async fn read_acc_mps2_gyro_rps(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>;
+    async fn read_acc_gyro(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>;
 
     fn acc_scale(&self) -> f32 {
         self.common().acc_scale
@@ -205,56 +208,22 @@ pub trait Imu {
         let acc_offset_mapped = self.common().axis_order.axes_order_inverse().map_vector(acc_offset);
         self.set_acc_offset(acc_offset_mapped);
     }
-    fn acc_scale_mps2(&self) -> f32 {
-        self.common().acc_scale_mps2
-    }
-    fn acc_offset_mps2(&self) -> Vector3df32 {
-        self.common().acc_offset_mps2
-    }
-    fn set_acc_offset_mps2(&mut self, acc_offset_mps2: Vector3df32) {
-        self.common_mut().acc_offset_mps2 = acc_offset_mps2;
-    }
-    fn acc_offset_mps2_mapped(&self) -> Vector3df32 {
-        self.common().axis_order.map_vector(self.common().acc_offset_mps2)
-    }
-    fn set_acc_offset_mps2_mapped(&mut self, acc_offset: Vector3df32) {
-        let acc_offset_mapped = self.common().axis_order.axes_order_inverse().map_vector(acc_offset);
-        self.set_acc_offset_mps2(acc_offset_mapped);
-    }
 
-    fn gyro_scale_dps(&self) -> f32 {
-        self.common().gyro_scale_dps
+    fn gyro_scale(&self) -> f32 {
+        self.common().gyro_scale
     }
     fn gyro_offset_dps(&self) -> Vector3df32 {
-        self.common().gyro_offset_dps
+        self.common().gyro_offset
     }
-    fn set_gyro_offset_dps(&mut self, gyro_offset_dps: Vector3df32) {
-        self.common_mut().gyro_offset_dps = gyro_offset_dps;
+    fn set_gyro_offset(&mut self, gyro_offset: Vector3df32) {
+        self.common_mut().gyro_offset = gyro_offset;
     }
-    fn gyro_offset_dps_mapped(&self) -> Vector3df32 {
-        self.common().axis_order.map_vector(self.common().gyro_offset_dps)
+    fn gyro_offset_mapped(&self) -> Vector3df32 {
+        self.common().axis_order.map_vector(self.common().gyro_offset)
     }
-    fn set_gyro_offset_dps_mapped(&mut self, gyro_offset_dps: Vector3df32) {
-        let gyro_offset_dps_mapped = self.common().axis_order.axes_order_inverse().map_vector(gyro_offset_dps);
-        self.set_gyro_offset_dps(gyro_offset_dps_mapped);
-    }
-
-    fn gyro_scale_rps(&self) -> f32 {
-        self.common().gyro_scale_rps
-    }
-    fn gyro_offset_rps(&self) -> Vector3df32 {
-        self.common().gyro_offset_rps
-    }
-    fn set_gyro_offset_rps(&mut self, gyro_offset_rps: Vector3df32) {
-        self.common_mut().gyro_offset_rps = gyro_offset_rps;
-    }
-
-    fn gyro_offset_rps_mapped(&self) -> Vector3df32 {
-        self.common().axis_order.map_vector(self.common().gyro_offset_rps)
-    }
-    fn set_gyro_offset_rps_mapped(&mut self, gyro_offset_rps: Vector3df32) {
-        let gyro_offset_rps_mapped = self.common().axis_order.axes_order_inverse().map_vector(gyro_offset_rps);
-        self.set_gyro_offset_rps(gyro_offset_rps_mapped);
+    fn set_gyro_offset_mapped(&mut self, gyro_offset: Vector3df32) {
+        let gyro_offset_mapped = self.common().axis_order.axes_order_inverse().map_vector(gyro_offset);
+        self.set_gyro_offset(gyro_offset_mapped);
     }
 }
 

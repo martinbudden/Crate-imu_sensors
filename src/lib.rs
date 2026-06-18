@@ -34,7 +34,7 @@ mod spi;
 pub use axes::ImuAxesOrder;
 #[cfg(feature = "i2c")]
 pub use i2c::I2cInterface;
-pub use imu::{Imu, ImuCommon, ImuConfig};
+pub use imu::{Imu, ImuAccScale, ImuCommon, ImuConfig, ImuGyroScale};
 pub use imu_bus::{ImuBus, MockImuBus, SetupError};
 pub use imu_mock::ImuMock;
 pub use imu426xx::Imu426xx;

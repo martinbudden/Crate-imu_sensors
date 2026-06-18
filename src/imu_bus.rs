@@ -58,6 +58,7 @@ impl MockImuBus {
     }
 }
 
+#[allow(clippy::unused_async)]
 impl ImuBus for MockImuBus {
     type Error = core::convert::Infallible;
 
