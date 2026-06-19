@@ -176,98 +176,113 @@ impl<B: ImuBus> Mpu6886<B> {
     }
 
     /// # Errors
+    #[allow(clippy::items_after_statements)]
     pub async fn init(
         &mut self,
-        _target_output_data_rate_hz: u32,
-        _gyro_sensitivity: u8,
+        target_output_data_rate_hz: u32,
+        gyro_sensitivity: u8,
         gyro_scale: ImuGyroScale,
-        _acc_sensitivity: u8,
+        acc_sensitivity: u8,
         acc_scale: ImuAccScale,
     ) -> Result<(u32, u32), B::Error> {
         let _chip_id = self.bus.read_register(self.config.address, REG_WHO_AM_I).await;
         delay_ms(1).await;
 
-        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, 0).await?; // clear the power management register
+        // Clear the power management register.
+        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, 0).await?;
         delay_ms(10).await;
 
-        {
-            const DEVICE_RESET: u8 = 0x01u8 << 7;
-            self.bus.write_register(self.config.address, REG_PWR_MGMT_1, DEVICE_RESET).await?; // reset the device
-            delay_ms(10).await;
-        }
+        // Reset the device.
+        const DEVICE_RESET: u8 = 0x01u8 << 7;
+        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, DEVICE_RESET).await?;
+        delay_ms(10).await;
 
-        {
-            const CLKSEL_1: u8 = 0x01;
-            self.bus.write_register(self.config.address, REG_PWR_MGMT_1, CLKSEL_1).await?; // CLKSEL must be set to 001 to achieve full gyroscope performance.
-            delay_ms(10).await;
-        }
+        // CLKSEL must be set to 001 to achieve full gyroscope performance.
+        const CLKSEL_1: u8 = 0x01;
+        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, CLKSEL_1).await?;
+        delay_ms(10).await;
 
-        // Gyro scale is fixed at 2000DPS, the maximum supported.
-        //enum gyro_scale_e { GFS_250DPS = 0, GFS_500DPS = 1, GFS_1000DPS = 2, GFS_2000DPS = 3 };
-        {
-            const GFS_2000DPS: u8 = 3;
-            const GYRO_FCHOICE_B: u8 = 0x00; // enables gyro update rate and filter configuration using REG_CONFIG
-            self.bus.write_register(self.config.address, REG_GYRO_CONFIG, (GFS_2000DPS << 3) | GYRO_FCHOICE_B).await?;
-            self.common.gyro_scale = 2000.0 / 32768.0;
-            if gyro_scale == ImuGyroScale::Rps {
-                self.common.gyro_scale = self.common.gyro_scale.to_radians();
-            }
-            delay_ms(1).await;
-        }
+        let (config, divider) =
+            self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_scale, target_output_data_rate_hz);
 
-        // Accelerometer scale is fixed at 8G, the maximum supported.
-        //enum acc_scale_e { AFS_2G = 0, AFS_4G = 1, AFS_8G = 2, AFS_16G = 3 };
-        {
-            const AFS_8G: u8 = 2;
-            self.bus.write_register(self.config.address, REG_ACCEL_CONFIG, AFS_8G << 3).await?;
-            self.common.acc_scale = 8.0 / 32768.0;
-            if acc_scale == ImuAccScale::Mps2 {
-                self.common.acc_scale *= ImuCommon::G0;
-            }
-            delay_ms(1).await;
-        }
-
-        {
-            const ACC_FCHOICE_B: u8 = 0x00; // Filter:218.1 3-DB BW (Hz), least filtered 1kHz update variant
-            self.bus.write_register(self.config.address, REG_ACCEL_CONFIG2, ACC_FCHOICE_B).await?;
-            delay_ms(1).await;
-        }
-
-        {
-            const FIFO_MODE_OVERWRITE: u8 = 0b0100_0000;
-            self.bus.write_register(self.config.address, REG_CONFIG, DLPF_CFG_1 | FIFO_MODE_OVERWRITE).await?;
-            delay_ms(1).await;
-        }
-
-        // M5Stack default divider is two, giving 500Hz output rate
-        self.bus.write_register(self.config.address, REG_SAMPLE_RATE_DIVIDER, DIVIDE_BY_2).await?;
+        self.bus.write_register(self.config.address, REG_GYRO_CONFIG, config).await?;
         delay_ms(1).await;
-        self.common.gyro_sample_rate_hz = 500;
-        self.common.acc_sample_rate_hz = 500;
 
+        self.bus.write_register(self.config.address, REG_SAMPLE_RATE_DIVIDER, divider).await?;
+        delay_ms(1).await;
+
+        let acc_register_value =
+            self.calculate_acc_scale_and_odr(acc_sensitivity, acc_scale, target_output_data_rate_hz);
+
+        self.bus.write_register(self.config.address, REG_ACCEL_CONFIG, acc_register_value).await?;
+        delay_ms(1).await;
+
+        // Configure filtering.
+        const ACC_FCHOICE_B: u8 = 0x00; // Filter:218.1 3-DB BW (Hz), least filtered 1kHz update variant
+        self.bus.write_register(self.config.address, REG_ACCEL_CONFIG2, ACC_FCHOICE_B).await?;
+        delay_ms(1).await;
+
+        // Configure FIFO.
         self.bus.write_register(self.config.address, REG_FIFO_ENABLE, 0x00).await?; // FIFO disabled
         delay_ms(1).await;
+        const FIFO_MODE_OVERWRITE: u8 = 0b_0100_0000;
+        self.bus.write_register(self.config.address, REG_CONFIG, DLPF_CFG_1 | FIFO_MODE_OVERWRITE).await?;
+        delay_ms(1).await;
 
+        // Configure interrupts.
         // M5 Unified settings
         //self.bus.write_register(self.config.address, REG_INT_PIN_CFG, 0b1100_0000).await; // Active low, open drain 50us pulse width, clear on read
         self.bus.write_register(self.config.address, REG_INT_PIN_CFG, 0x22).await?;
         delay_ms(1).await;
 
-        {
-            const DATA_RDY_INT_EN: u8 = 0x01;
-            self.bus.write_register(self.config.address, REG_INT_ENABLE, DATA_RDY_INT_EN).await?; // data ready interrupt enabled
-            delay_ms(10).await;
-        }
+        const DATA_RDY_INT_EN: u8 = 0x01;
+        self.bus.write_register(self.config.address, REG_INT_ENABLE, DATA_RDY_INT_EN).await?; // data ready interrupt enabled
+        delay_ms(10).await;
 
         self.bus.write_register(self.config.address, REG_USER_CTRL, 0x00).await?;
 
-        //bus_semaphore_give(_bus_mutex);
         delay_ms(1).await;
 
-        // return the gyro sample rate actually set
-        Ok((0, 0))
+        Ok((self.common.gyro_sample_rate_hz, self.common.acc_sample_rate_hz))
     }
 
+    pub fn calculate_gyro_scale_and_odr(
+        &mut self,
+        _gyro_sensitivity: u8,
+        gyro_scale: ImuGyroScale,
+        _target_output_data_rate_hz: u32,
+    ) -> (u8, u8) {
+        const GFS_2000DPS: u8 = 3;
+        const GYRO_FCHOICE_B: u8 = 0x00; // enables gyro update rate and filter configuration using REG_CONFIG
+        self.common.gyro_scale = 2000.0 / 32768.0;
+        if gyro_scale == ImuGyroScale::Rps {
+            self.common.gyro_scale = self.common.gyro_scale.to_radians();
+        }
+        // M5Stack default divider is two, giving 500Hz output rate
+        self.common.gyro_sample_rate_hz = 500;
+
+        ((GFS_2000DPS << 3) | GYRO_FCHOICE_B, DIVIDE_BY_2)
+    }
+
+    pub fn calculate_acc_scale_and_odr(
+        &mut self,
+        _acc_sensitivity: u8,
+        acc_scale: ImuAccScale,
+        _target_output_data_rate_hz: u32,
+    ) -> u8 {
+        // Accelerometer scale is fixed at 8G, the maximum supported.
+        //enum acc_scale_e { AFS_2G = 0, AFS_4G = 1, AFS_8G = 2, AFS_16G = 3 };
+        const AFS_8G: u8 = 2;
+        self.common.acc_scale = 8.0 / 32768.0;
+        if acc_scale == ImuAccScale::Mps2 {
+            self.common.acc_scale *= ImuCommon::G0;
+        }
+        self.common.acc_sample_rate_hz = self.common.gyro_sample_rate_hz;
+
+        AFS_8G << 3
+    }
+
+    #[inline]
     pub fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
         let acc = Vector3df32::from_be_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
         ImuAxesOrder::map_vector(axis_order, acc)
@@ -279,6 +294,7 @@ impl<B: ImuBus> Mpu6886<B> {
         ImuAxesOrder::map_vector(axis_order, gyro)
     }
 
+    #[inline]
     pub fn map_acc_gyro(&self, buf: [u8; 14], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
         let acc_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
         let _temperature = i16::from_be_bytes([buf[6], buf[7]]);
@@ -315,10 +331,10 @@ mod tests {
             ImuCommon::ACC_FULL_SCALE_MAX,
             ImuAccScale::G,
         ));
-        let (gyro_register_value, acc_register_value) = result.unwrap();
+        let (gyro_sample_rate_hz, acc_sample_rate_hz) = result.unwrap();
 
-        assert_eq!(0, gyro_register_value);
-        assert_eq!(0, acc_register_value);
+        assert_eq!(500, gyro_sample_rate_hz);
+        assert_eq!(500, acc_sample_rate_hz);
         assert_eq!(2000.0 / 32768.0, imu.common.gyro_scale);
         assert_eq!(8.0 / 32768.0, imu.common.acc_scale);
         assert_eq!(500, imu.common.gyro_sample_rate_hz);

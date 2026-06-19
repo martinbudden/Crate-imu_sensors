@@ -2702,7 +2702,7 @@ dependencies = [
 [[package]]
 name = "vqm"
 version = "0.1.12"
-source = "git+https://github.com/martinbudden/crate-vector-quaternion-matrix#4be5f22308bdc162b1e4003df616ec8170ba941a"
+source = "git+https://github.com/martinbudden/crate-vector-quaternion-matrix#80d928dd6439fe91623b2877ec1653e268f9d30c"
 dependencies = [
  "cfg-if",
  "derive_more",

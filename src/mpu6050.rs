@@ -183,7 +183,7 @@ impl<B: ImuBus> Mpu6050<B> {
         gyro_scale: ImuGyroScale,
         acc_sensitivity: u8,
         acc_scale: ImuAccScale,
-    ) -> Result<(u8, u8), B::Error> {
+    ) -> Result<(u32, u32), B::Error> {
         // clock source: PLL with Z axis gyro reference
         self.bus.write_register(self.config.address, REG_PWR_MGMT_1, CLKSEL_PLL_Z_AXIS_GYRO).await?;
         delay_ms(15).await;
@@ -209,17 +209,24 @@ impl<B: ImuBus> Mpu6050<B> {
         delay_ms(15).await;
 
         // TODO: write _gyro_sample_rate_divider to appropriate register.
-        let (_gyro_sample_rate_divider, gyro_sample_rate_hz) = match target_output_data_rate_hz {
-            2001..=4000 => (1, 4000), // div by 2
-            1001..=2000 => (3, 2000), // div by 4
-            501..=1000 => (7, 1000),  // div by 8
-            251..=500 => (15, 500),
-            1..=250 => (31, 250), // assuming 8000 / (31 + 1) = 250
-            _ => (0, 8000),       // div by 1
-        };
+        let _gyro_register_value =
+            self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_scale, target_output_data_rate_hz);
+        //self.bus.write_register(self.config.address, REG_, gyro_register_value).await?;
 
-        self.common.gyro_sample_rate_hz = gyro_sample_rate_hz;
-        let (scale_dps, gyro_range) = match gyro_sensitivity {
+        let _acc_register_value =
+            self.calculate_acc_scale_and_odr(acc_sensitivity, acc_scale, target_output_data_rate_hz);
+        //self.bus.write_register(self.config.address, REG_, acc_register_value).await?;
+
+        Ok((self.common.gyro_sample_rate_hz, self.common.acc_sample_rate_hz))
+    }
+
+    pub fn calculate_gyro_scale_and_odr(
+        &mut self,
+        gyro_sensitivity: u8,
+        gyro_scale: ImuGyroScale,
+        target_output_data_rate_hz: u32,
+    ) -> u8 {
+        let (scale_dps, gyro_register_value) = match gyro_sensitivity {
             // full scale 125 not supported so use 250 instead.
             ImuCommon::GYRO_FULL_SCALE_125_DPS | ImuCommon::GYRO_FULL_SCALE_250_DPS => {
                 (250.0 / 32768.0, GYRO_RANGE_250_DPS)
@@ -228,10 +235,30 @@ impl<B: ImuBus> Mpu6050<B> {
             ImuCommon::GYRO_FULL_SCALE_1000_DPS => (1000.0 / 32768.0, GYRO_RANGE_1000_DPS),
             _ => (2000.0 / 32768.0, GYRO_RANGE_2000_DPS),
         };
+
         self.common.gyro_scale = if gyro_scale == ImuGyroScale::Dps { scale_dps } else { scale_dps.to_radians() };
 
+        let (gyro_sample_rate_hz, gyro_odr) = match target_output_data_rate_hz {
+            2001..=4000 => (4000, 1), // div by 2
+            1001..=2000 => (2000, 3), // div by 4
+            501..=1000 => (1000, 7),  // div by 8
+            251..=500 => (500, 15),
+            1..=250 => (250, 31), // assuming 8000 / (31 + 1) = 250
+            _ => (8000, 0),       // div by 1
+        };
+        self.common.gyro_sample_rate_hz = gyro_sample_rate_hz;
+
+        gyro_register_value | gyro_odr
+    }
+
+    pub fn calculate_acc_scale_and_odr(
+        &mut self,
+        acc_sensitivity: u8,
+        acc_scale: ImuAccScale,
+        target_output_data_rate_hz: u32,
+    ) -> u8 {
         self.common.acc_sample_rate_hz = 1000;
-        let (scale, acc_range) = match acc_sensitivity {
+        let (scale, acc_register_value) = match acc_sensitivity {
             ImuCommon::ACC_FULL_SCALE_2G => (2.0 / 32768.0, ACCEL_RANGE_2G),
             ImuCommon::ACC_FULL_SCALE_4G => (4.0 / 32768.0, ACCEL_RANGE_4G),
             ImuCommon::ACC_FULL_SCALE_8G => (8.0 / 32768.0, ACCEL_RANGE_8G),
@@ -239,7 +266,15 @@ impl<B: ImuBus> Mpu6050<B> {
         };
         self.common.acc_scale = if acc_scale == ImuAccScale::G { scale } else { scale * ImuCommon::G0 };
 
-        Ok((gyro_range, acc_range))
+        // TODO: acc sample rate tops out at 1000, need to check the divisors
+        let (acc_sample_rate_hz, acc_odr) = match target_output_data_rate_hz {
+            251..=500 => (500, 0),
+            1..=250 => (250, 0),
+            _ => (1000, 0),
+        };
+        self.common.acc_sample_rate_hz = acc_sample_rate_hz;
+
+        acc_register_value | acc_odr
     }
 
     #[inline]
@@ -315,10 +350,13 @@ mod tests {
             ImuCommon::ACC_FULL_SCALE_MAX,
             ImuAccScale::G,
         ));
-        let (gyro_register_value, acc_register_value) = result.unwrap();
+        let (gyro_sample_rate_hz, acc_sample_rate_hz) = result.unwrap();
+        /*let Ok((gyro_sample_rate_hz, acc_sample_rate_hz)) = result else {
+            panic!("Result unwrap error");
+        };*/
+        assert_eq!(8000, gyro_sample_rate_hz);
+        assert_eq!(1000, acc_sample_rate_hz);
 
-        assert_eq!(24, gyro_register_value);
-        assert_eq!(24, acc_register_value);
         assert_eq!(2000.0 / 32768.0, imu.common.gyro_scale);
         assert_eq!(16.0 / 32768.0, imu.common.acc_scale);
         assert_eq!(8000, imu.common.gyro_sample_rate_hz);

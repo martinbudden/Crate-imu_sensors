@@ -63,9 +63,11 @@ impl ImuBus for MockImuBus {
     type Error = core::convert::Infallible;
 
     async fn bus_write_read(&mut self, _address: u8, _write: &[u8], _read: &mut [u8]) -> Result<(), Self::Error> {
+        embassy_time::Timer::after_ticks(0).await;
         Ok(())
     }
     async fn read_register(&mut self, _address: u8, reg: u8) -> Result<u8, Self::Error> {
+        embassy_time::Timer::after_ticks(0).await;
         Ok(self.registers[reg as usize])
     }
 
@@ -75,11 +77,13 @@ impl ImuBus for MockImuBus {
 
         // Copy slice from internal memory to the output buffer
         data.copy_from_slice(&self.registers[start..end]);
+        embassy_time::Timer::after_ticks(0).await;
         Ok(())
     }
 
     async fn write_register(&mut self, _address: u8, reg: u8, data: u8) -> Result<(), Self::Error> {
         self.registers[reg as usize] = data;
+        embassy_time::Timer::after_ticks(0).await;
         Ok(())
     }
 
@@ -88,6 +92,7 @@ impl ImuBus for MockImuBus {
         let end = start + data.len();
 
         self.registers[start..end].copy_from_slice(data);
+        embassy_time::Timer::after_ticks(0).await;
         Ok(())
     }
 }

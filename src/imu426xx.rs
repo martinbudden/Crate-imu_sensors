@@ -260,10 +260,12 @@ impl<B: ImuBus> Imu426xx<B> {
         acc_sensitivity: u8,
         acc_scale: ImuAccScale,
     ) -> Result<(u32, u32), B::Error> {
+
         self.bus.write_register(self.config.address, REG_BANK_SEL, 0).await?;
         self.bus.write_register(self.config.address, REG_PWR_MGMT0, PWR_OFF).await?;
 
-        self.bus.write_register(self.config.address, REG_DEVICE_CONFIG, DEVICE_CONFIG_DEFAULT).await?; // default reset configuration
+         // default reset configuration
+        self.bus.write_register(self.config.address, REG_DEVICE_CONFIG, DEVICE_CONFIG_DEFAULT).await?;
         delay_ms(1).await;
 
         /*let chip_id = self.bus.read_register_with_timeout(REG_WHO_AM_I, 100);
@@ -310,6 +312,7 @@ impl<B: ImuBus> Imu426xx<B> {
             )
             .await?;
         self.bus.write_register(self.config.address, REG_INT_CONFIG0, INT_CLEAR_ON_STATUS_BIT_READ).await?;
+
         // set interrupt pulse duration to 8us and disable de-assert duration, both required for ODR >= 4kHz
         self.bus
             .write_register(self.config.address, REG_INT_CONFIG1, INT_TPULSE_DURATION_8US | INT_TDEASSERT_DISABLE)
