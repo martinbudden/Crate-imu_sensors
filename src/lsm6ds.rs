@@ -240,7 +240,6 @@ impl<B: ImuBus> Lsm6ds<B> {
         acc_sensitivity: u8,
         acc_scale: ImuAccScale,
     ) -> Result<(u32, u32), B::Error> {
-
         //if (chip_id != REG_WHO_AM_I_RESPONSE_LSM6DS3TR_C && chip_id != REG_WHO_AM_I_RESPONSE_ISM330DHCX && chip_id != REG_WHO_AM_I_RESPONSE_LSM6DSOX) {
 
         // Software reset
@@ -251,15 +250,15 @@ impl<B: ImuBus> Lsm6ds<B> {
         delay_ms(1).await;
 
         // Interrupt pins are by default forced to ground, so active high
-         // Enable gyro data ready on INT1 pin
+        // Enable gyro data ready on INT1 pin
         self.bus.write_register(self.config.address, REG_INT1_CTRL, INT1_DRDY_G).await?;
         delay_ms(1).await;
 
-         // Enable gyro data ready on INT2 pin
+        // Enable gyro data ready on INT2 pin
         self.bus.write_register(self.config.address, REG_INT2_CTRL, INT2_DRDY_G).await?;
         delay_ms(1).await;
 
-         // Block Data Update and automatically increment registers when read via serial interface (I2C or SPI)
+        // Block Data Update and automatically increment registers when read via serial interface (I2C or SPI)
         self.bus.write_register(self.config.address, REG_CTRL3_C, BDU | IF_INC).await?;
         delay_ms(1).await;
 

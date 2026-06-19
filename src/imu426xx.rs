@@ -260,11 +260,10 @@ impl<B: ImuBus> Imu426xx<B> {
         acc_sensitivity: u8,
         acc_scale: ImuAccScale,
     ) -> Result<(u32, u32), B::Error> {
-
         self.bus.write_register(self.config.address, REG_BANK_SEL, 0).await?;
         self.bus.write_register(self.config.address, REG_PWR_MGMT0, PWR_OFF).await?;
 
-         // default reset configuration
+        // default reset configuration
         self.bus.write_register(self.config.address, REG_DEVICE_CONFIG, DEVICE_CONFIG_DEFAULT).await?;
         delay_ms(1).await;
 

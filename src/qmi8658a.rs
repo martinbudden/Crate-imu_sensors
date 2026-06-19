@@ -321,8 +321,33 @@ mod tests {
     #![allow(clippy::float_cmp)]
     use super::*;
     use crate::{ImuAxesOrder, MockImuBus};
+    use core::future::Future;
+    use core::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
 
     fn is_normal<T: Sized + Send + Sync + Unpin>() {}
+
+    // A lightweight VTable for a host spin-loop waker that requires zero allocations
+    // Kept here as a reference in case I ever want to get rid of pollster.
+    const NOOP_VTABLE: RawWakerVTable =
+        RawWakerVTable::new(|_| RawWaker::new(core::ptr::null(), &NOOP_VTABLE), |_| {}, |_| {}, |_| {});
+
+    // Your own zero-dependency block_on function
+    fn block_on<F: Future>(mut future: F) -> F::Output {
+        let mut future = unsafe { core::pin::Pin::new_unchecked(&mut future) };
+        let raw_waker = RawWaker::new(core::ptr::null(), &NOOP_VTABLE);
+        let waker = unsafe { Waker::from_raw(raw_waker) };
+        let mut context = Context::from_waker(&waker);
+
+        loop {
+            match future.as_mut().poll(&mut context) {
+                Poll::Ready(output) => return output,
+                Poll::Pending => {
+                    //std::thread::yield_now();
+                    core::hint::spin_loop();
+                }
+            }
+        }
+    }
 
     #[test]
     fn normal_types() {
@@ -333,7 +358,7 @@ mod tests {
         let imu_bus = MockImuBus::new();
         let mut imu: Qmi8658a<MockImuBus> = Qmi8658a::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
-        let result = pollster::block_on(imu.init(
+        let result = block_on(imu.init(
             7172,
             ImuCommon::GYRO_FULL_SCALE_MAX,
             ImuGyroScale::Dps,

@@ -1,4 +1,5 @@
 {
+    "rust-analyzer.check.allTargets": false,
     "cSpell.words": [
         "AFSR",
         "arrayvec",
@@ -114,6 +115,7 @@
         "USRL",
         "vcell",
         "VSYS",
+        "VTABLE",
         "wakeups",
         "walkdir",
         "wasi",
