@@ -14,18 +14,18 @@ It aims to support a variety of platforms including Raspberry Pi Pico, STM32, an
 
 The aim is to eventually support the following IMUs on both I2C and SPI.
 
-| IMU                                                                                        | ID          | SPI      | I2C      |
-| -------------------------------------------------------------------------------------------| ----------- | ---------| -------- |
-| Bosch [BMI270](https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi270/)       | BMI270      |          |          |
-| CEVA [BNO085](https://www.ceva-ip.com/product/bno-9-axis-imu/)                             | BNO085      |          |          |
-| TDK [ICM-20602](https://invensense.tdk.com/products/motion-tracking/6-axis/icm-20602/)     | ICM420602   |          |          |
-| TDK [ICM-42605](https://invensense.tdk.com/products/motion-tracking/6-axis/icm-42605/)     | ICM426xx    |          |          |
-| TDK [ICM-42688-P](https://invensense.tdk.com/products/motion-tracking/6-axis/icm-42688-p/) | ICM426xx    |          |          |
-| TDK [MPU-6000](https://product.tdk.com/en/search/sensor/mortion-inertial/imu/info?part_no=MPU-6000) | MPU6000 |          |          |
-| ST [ISM330DHCX](https://www.st.com/en/mems-and-sensors/ism330dhcx.html)                    | ISM330DHCX  |          |          |
-| ST [LSM6DS3TR-C](https://www.st.com/en/mems-and-sensors/lsm6ds3tr-c.html)                  | LSM6DS3TR_C |          |          |
-| ST [LSM6DSOX](https://www.st.com/en/mems-and-sensors/lsm6dsox.html)                        | LSM6DSOX    |          |          |
-| InvenSense MPU-6886                                                                        | MPU6886     |          |          |
+| IMU                                                                                                 | ID            |
+| ----------------------------------------------------------------------------------------------------| ------------- |
+| Bosch [BMI270](https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi270/)                | `BMI270`      |
+| CEVA [BNO085](https://www.ceva-ip.com/product/bno-9-axis-imu/)                                      | `BNO085`      |
+| TDK [ICM-20602](https://invensense.tdk.com/products/motion-tracking/6-axis/icm-20602/)              | `ICM420602`   |
+| TDK [ICM-42605](https://invensense.tdk.com/products/motion-tracking/6-axis/icm-42605/)              | `ICM426xx`    |
+| TDK [ICM-42688-P](https://invensense.tdk.com/products/motion-tracking/6-axis/icm-42688-p/)          | `ICM426xx`    |
+| TDK [MPU-6000](https://product.tdk.com/en/search/sensor/mortion-inertial/imu/info?part_no=MPU-6000) | `MPU6000`     |
+| ST [ISM330DHCX](https://www.st.com/en/mems-and-sensors/ism330dhcx.html)                             | `ISM330DHCX`  |
+| ST [LSM6DS3TR-C](https://www.st.com/en/mems-and-sensors/lsm6ds3tr-c.html)                           | `LSM6DS3TR_C` |
+| ST [LSM6DSOX](https://www.st.com/en/mems-and-sensors/lsm6dsox.html)                                 | `LSM6DSOX`    |
+| Invensense MPU-6886                                                                                 | `MPU6886`     |
 
 The ICM-42605 and ICM-42688 are broadly compatible and share the same driver.
 

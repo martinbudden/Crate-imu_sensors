@@ -4,8 +4,8 @@ use {
     serde::{Deserialize, Serialize},
 };
 
-use crate::{ImuAxesOrder, ImuBus};
 use vqm::Vector3df32;
+use crate::{ImuAxesOrder, ImuBus};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum ImuAccScale {
@@ -54,6 +54,7 @@ impl ImuCommon {
     pub const ACC_FULL_SCALE_16G: u8 = 5;
     pub const ACC_FULL_SCALE_32G: u8 = 6;
 
+    #[must_use]
     pub const fn new(axis_order: ImuAxesOrder) -> Self {
         const GYRO_2000DPS_RES: f32 = 2000.0 / 32768.0;
         const ACC_8G_RES: f32 = 8.0 / 32768.0;
@@ -81,10 +82,12 @@ impl Default for ImuCommon {
 pub struct ImuConfig {
     pub gyro_id_msp: u16,
     pub acc_id_msp: u16,
-    pub device_id: u8, // 8-bit id assigned by IMU manufacturer
+     // 8-bit id assigned by IMU manufacturer.
+    pub device_id: u8,
     pub address: u8,
     pub axis_order: u8,
-    pub flags: u8, // Flags for describing IMU characteristics
+     /// Flags for describing IMU characteristics.
+    pub flags: u8,
 }
 
 #[cfg(feature = "serde")]
@@ -153,10 +156,10 @@ impl ImuConfig {
         Self {
             gyro_id_msp: 0,
             acc_id_msp: 0,
-            device_id: 0, // 8-bit id assigned by IMU manufacturer
+            device_id: 0,
             address: 0,
             axis_order: 0,
-            flags: 0, // Flags for describing IMU characteristics
+            flags: 0,
         }
     }
 }

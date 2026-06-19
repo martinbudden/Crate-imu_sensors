@@ -25,9 +25,10 @@ rustc_version = "0.4.1"
 [features]
 # Platform Profiles
 default = ["libm", "spi"]
+# std is required for host testing
 std = [
-    "embassy-executor",
-    "embassy-executor/platform-std",
+    #"embassy-executor",
+    #"embassy-executor/platform-std",
     "embassy-time/std", 
     "embassy-time/generic-queue-8",     
     "vqm/std"
@@ -75,7 +76,7 @@ embassy-stm32 = { version = "0.6.0", default-features = false, features = ["stm3
 esp-idf-hal = { version = "0.46.2", default-features = false, optional = true }
 
 # General Embassy HAL (Marked optional = true to support the 'std' feature mapping)
-embassy-executor = { version = "0.10.0", default-features = false, features = ["executor-thread"], optional = true }
+#embassy-executor = { version = "0.10.0", default-features = false, features = ["executor-thread"], optional = true }
 embassy-sync = { version = "0.8.0", default-features = false }
 embassy-time = { version = "0.5.1", default-features = false, features = ["generic-queue-8"] }
 

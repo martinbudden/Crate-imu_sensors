@@ -7,14 +7,6 @@
 #![warn(unused_results)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::doc_paragraphs_missing_punctuation)]
-#![allow(clippy::inline_always)]
-#![allow(clippy::return_self_not_must_use)]
-#![allow(clippy::must_use_candidate)]
-#![allow(clippy::doc_markdown)]
-
-// Enable standard library only if the 'std' feature is explicitly active
-#[cfg(feature = "std")]
-extern crate std;
 
 #[cfg(all(feature = "i2c", feature = "spi"))]
 compile_error!("Features 'i2c' and 'spi' are mutually exclusive and cannot be enabled together.");
@@ -32,8 +24,6 @@ mod qmi8658a;
 mod spi;
 
 pub use axes::ImuAxesOrder;
-#[cfg(feature = "i2c")]
-pub use i2c::I2cInterface;
 pub use imu::{Imu, ImuAccScale, ImuCommon, ImuConfig, ImuGyroScale};
 pub use imu_bus::{ImuBus, MockImuBus, SetupError};
 pub use imu_mock::ImuMock;
@@ -42,5 +32,3 @@ pub use lsm6ds::Lsm6ds;
 pub use mpu6050::Mpu6050;
 pub use mpu6886::Mpu6886;
 pub use qmi8658a::Qmi8658a;
-#[cfg(feature = "spi")]
-pub use spi::SpiInterface;

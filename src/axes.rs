@@ -1,3 +1,4 @@
+//#![allow(clippy::return_self_not_must_use)]
 use vqm::Vector3df32;
 
 //use cfg_if::cfg_if;
@@ -49,6 +50,7 @@ pub enum ImuAxesOrder {
 }
 
 impl ImuAxesOrder {
+    #[must_use]
     pub fn map_vector(self, v: Vector3df32) -> Vector3df32 {
         const SIN45F: f32 = 0.707_106_77_f32;
         const COS45F: f32 = 0.707_106_77_f32;
@@ -100,6 +102,7 @@ impl ImuAxesOrder {
     }
 
     #[allow(clippy::too_many_lines)]
+    #[must_use]
     pub fn map_acc_gyro(self, acc: Vector3df32, gyro: Vector3df32) -> (Vector3df32, Vector3df32) {
         // use a feature flag to hardcode the mapping, so that the match statement can be bypassed for optimal performance.
         /*cfg_if! {
@@ -224,6 +227,7 @@ impl ImuAxesOrder {
     }
     //}
     //}
+    #[must_use]
     pub fn axes_order_inverse(self) -> Self {
         match self {
             ImuAxesOrder::YPOS_XNEG_ZPOS => ImuAxesOrder::YNEG_XPOS_ZPOS,
