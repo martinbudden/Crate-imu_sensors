@@ -1,7 +1,7 @@
 //#![allow(clippy::return_self_not_must_use)]
 use vqm::Vector3df32;
 
-//use cfg_if::cfg_if;
+use cfg_if::cfg_if;
 use num_enum::{FromPrimitive, IntoPrimitive};
 use strum::EnumIter;
 
@@ -50,184 +50,230 @@ pub enum ImuAxesOrder {
 }
 
 impl ImuAxesOrder {
+    #[rustfmt::skip]
+    #[inline]
     #[must_use]
     pub fn map_vector(self, v: Vector3df32) -> Vector3df32 {
-        const SIN45F: f32 = 0.707_106_77_f32;
-        const COS45F: f32 = 0.707_106_77_f32;
+        cfg_if! {
+        if #[cfg(feature = "axes_xpos_ypos_zpos")] {
+            v
+        } else if #[cfg(feature = "axes_yneg_xpos_zpos")] {
+            Vector3df32 { x: -v.y,  y:  v.x,  z:  v.z }
+        } else if #[cfg(feature = "axes_ypos_xneg_zpos")] {
+            Vector3df32 { x:  v.y,  y: -v.x,  z:  v.z }
+        } else if #[cfg(feature = "axes_xneg_yneg_zpos")] {
+            Vector3df32 { x: -v.x,  y: -v.y,  z:  v.z }
+        } else if #[cfg(feature = "axes_xpos_zpos_yneg")] {
+            Vector3df32 { x:  v.x,  y:  v.z,  z: -v.y }
+        } else {
+            const SIN45: f32 = core::f32::consts::FRAC_1_SQRT_2;
+            const COS45: f32 = core::f32::consts::FRAC_1_SQRT_2;
 
-        match self {
-            ImuAxesOrder::XPOS_YPOS_ZPOS => v,
-            ImuAxesOrder::YPOS_XNEG_ZPOS => Vector3df32 { x: v.y, y: -v.x, z: v.z },
-            ImuAxesOrder::XNEG_YNEG_ZPOS => Vector3df32 { x: -v.x, y: -v.y, z: v.z },
-            ImuAxesOrder::YNEG_XPOS_ZPOS => Vector3df32 { x: -v.y, y: v.x, z: v.z },
-            ImuAxesOrder::XPOS_YNEG_ZNEG => Vector3df32 { x: v.x, y: -v.y, z: -v.z },
-            ImuAxesOrder::YPOS_XPOS_ZNEG => Vector3df32 { x: v.y, y: v.x, z: -v.z },
-            ImuAxesOrder::XNEG_YPOS_ZNEG => Vector3df32 { x: -v.x, y: v.y, z: -v.z },
-            ImuAxesOrder::YNEG_XNEG_ZNEG => Vector3df32 { x: -v.y, y: -v.x, z: -v.z },
-            ImuAxesOrder::ZPOS_YNEG_XPOS => Vector3df32 { x: v.z, y: -v.y, z: v.x },
-            ImuAxesOrder::YPOS_ZPOS_XPOS => Vector3df32 { x: v.y, y: v.z, z: v.x },
-            ImuAxesOrder::ZNEG_YPOS_XPOS => Vector3df32 { x: -v.z, y: v.y, z: v.x },
-            ImuAxesOrder::YNEG_ZNEG_XPOS => Vector3df32 { x: -v.y, y: -v.z, z: v.x },
-            ImuAxesOrder::ZPOS_YPOS_XNEG => Vector3df32 { x: v.z, y: v.y, z: -v.x },
-            ImuAxesOrder::YPOS_ZNEG_XNEG => Vector3df32 { x: v.y, y: -v.z, z: -v.x },
-            ImuAxesOrder::ZNEG_YNEG_XNEG => Vector3df32 { x: -v.z, y: -v.y, z: -v.x },
-            ImuAxesOrder::YNEG_ZPOS_XNEG => Vector3df32 { x: -v.y, y: v.z, z: -v.x },
-            ImuAxesOrder::ZPOS_XPOS_YPOS => Vector3df32 { x: v.z, y: v.x, z: v.y },
-            ImuAxesOrder::XNEG_ZPOS_YPOS => Vector3df32 { x: -v.x, y: v.z, z: v.y },
-            ImuAxesOrder::ZNEG_XNEG_YPOS => Vector3df32 { x: -v.z, y: -v.x, z: v.y },
-            ImuAxesOrder::XPOS_ZNEG_YPOS => Vector3df32 { x: v.x, y: -v.z, z: v.y },
-            ImuAxesOrder::ZPOS_XNEG_YNEG => Vector3df32 { x: v.z, y: -v.x, z: -v.y },
-            ImuAxesOrder::XNEG_ZNEG_YNEG => Vector3df32 { x: -v.x, y: -v.z, z: -v.y },
-            ImuAxesOrder::ZNEG_XPOS_YNEG => Vector3df32 { x: -v.z, y: v.x, z: -v.y },
-            ImuAxesOrder::XPOS_ZPOS_YNEG => Vector3df32 { x: v.x, y: v.z, z: -v.y },
-            ImuAxesOrder::XPOS_YPOS_ZPOS_45 => {
-                Vector3df32 { x: v.x * COS45F + v.y * SIN45F, y: -v.x * SIN45F + v.y * COS45F, z: v.z }
+            match self {
+                ImuAxesOrder::XPOS_YPOS_ZPOS => v,
+                ImuAxesOrder::YPOS_XNEG_ZPOS => Vector3df32 { x:  v.y, y: -v.x, z:  v.z },
+                ImuAxesOrder::XNEG_YNEG_ZPOS => Vector3df32 { x: -v.x, y: -v.y, z:  v.z },
+                ImuAxesOrder::YNEG_XPOS_ZPOS => Vector3df32 { x: -v.y, y:  v.x, z:  v.z },
+                ImuAxesOrder::XPOS_YNEG_ZNEG => Vector3df32 { x:  v.x, y: -v.y, z: -v.z },
+                ImuAxesOrder::YPOS_XPOS_ZNEG => Vector3df32 { x:  v.y, y:  v.x, z: -v.z },
+                ImuAxesOrder::XNEG_YPOS_ZNEG => Vector3df32 { x: -v.x, y:  v.y, z: -v.z },
+                ImuAxesOrder::YNEG_XNEG_ZNEG => Vector3df32 { x: -v.y, y: -v.x, z: -v.z },
+                ImuAxesOrder::ZPOS_YNEG_XPOS => Vector3df32 { x:  v.z, y: -v.y, z:  v.x },
+                ImuAxesOrder::YPOS_ZPOS_XPOS => Vector3df32 { x:  v.y, y:  v.z, z:  v.x },
+                ImuAxesOrder::ZNEG_YPOS_XPOS => Vector3df32 { x: -v.z, y:  v.y, z:  v.x },
+                ImuAxesOrder::YNEG_ZNEG_XPOS => Vector3df32 { x: -v.y, y: -v.z, z:  v.x },
+                ImuAxesOrder::ZPOS_YPOS_XNEG => Vector3df32 { x:  v.z, y:  v.y, z: -v.x },
+                ImuAxesOrder::YPOS_ZNEG_XNEG => Vector3df32 { x:  v.y, y: -v.z, z: -v.x },
+                ImuAxesOrder::ZNEG_YNEG_XNEG => Vector3df32 { x: -v.z, y: -v.y, z: -v.x },
+                ImuAxesOrder::YNEG_ZPOS_XNEG => Vector3df32 { x: -v.y, y:  v.z, z: -v.x },
+                ImuAxesOrder::ZPOS_XPOS_YPOS => Vector3df32 { x:  v.z, y:  v.x, z:  v.y },
+                ImuAxesOrder::XNEG_ZPOS_YPOS => Vector3df32 { x: -v.x, y:  v.z, z:  v.y },
+                ImuAxesOrder::ZNEG_XNEG_YPOS => Vector3df32 { x: -v.z, y: -v.x, z:  v.y },
+                ImuAxesOrder::XPOS_ZNEG_YPOS => Vector3df32 { x:  v.x, y: -v.z, z:  v.y },
+                ImuAxesOrder::ZPOS_XNEG_YNEG => Vector3df32 { x:  v.z, y: -v.x, z: -v.y },
+                ImuAxesOrder::XNEG_ZNEG_YNEG => Vector3df32 { x: -v.x, y: -v.z, z: -v.y },
+                ImuAxesOrder::ZNEG_XPOS_YNEG => Vector3df32 { x: -v.z, y:  v.x, z: -v.y },
+                ImuAxesOrder::XPOS_ZPOS_YNEG => Vector3df32 { x:  v.x, y:  v.z, z: -v.y },
+                ImuAxesOrder::XPOS_YPOS_ZPOS_45 => {
+                    Vector3df32 { x: v.x * COS45 + v.y * SIN45, y: -v.x * SIN45 + v.y * COS45, z: v.z }
+                }
+                ImuAxesOrder::YPOS_XNEG_ZPOS_45 => {
+                    const SIN135: f32 = SIN45;
+                    const COS135: f32 = -COS45;
+                    Vector3df32 { x: v.x * COS135 + v.y * SIN135, y: -v.x * SIN135 + v.y * COS135, z: v.z }
+                }
+                ImuAxesOrder::XNEG_YNEG_ZPOS_45 => {
+                    const SIN225: f32 = -SIN45;
+                    const COS225: f32 = -COS45;
+                    Vector3df32 { x: v.x * COS225 + v.y * SIN225, y: -v.x * SIN225 + v.y * COS225, z: v.z }
+                }
+                ImuAxesOrder::YNEG_XPOS_ZPOS_45 => {
+                    const SIN315: f32 = -SIN45;
+                    const COS315: f32 = COS45;
+                    Vector3df32 { x: v.x * COS315 + v.y * SIN315, y: -v.x * SIN315 + v.y * COS315, z: v.z }
+                }
             }
-            ImuAxesOrder::YPOS_XNEG_ZPOS_45 => {
-                const SIN135F: f32 = SIN45F;
-                const COS135F: f32 = -COS45F;
-                Vector3df32 { x: v.x * COS135F + v.y * SIN135F, y: -v.x * SIN135F + v.y * COS135F, z: v.z }
-            }
-            ImuAxesOrder::XNEG_YNEG_ZPOS_45 => {
-                const SIN225F: f32 = -SIN45F;
-                const COS225F: f32 = -COS45F;
-                Vector3df32 { x: v.x * COS225F + v.y * SIN225F, y: -v.x * SIN225F + v.y * COS225F, z: v.z }
-            }
-            ImuAxesOrder::YNEG_XPOS_ZPOS_45 => {
-                const SIN315F: f32 = -SIN45F;
-                const COS315F: f32 = COS45F;
-                Vector3df32 { x: v.x * COS315F + v.y * SIN315F, y: -v.x * SIN315F + v.y * COS315F, z: v.z }
-            }
-        }
+        }}
     }
 
+    #[rustfmt::skip]
     #[allow(clippy::too_many_lines)]
+    #[inline]
     #[must_use]
     pub fn map_acc_gyro(self, acc: Vector3df32, gyro: Vector3df32) -> (Vector3df32, Vector3df32) {
         // use a feature flag to hardcode the mapping, so that the match statement can be bypassed for optimal performance.
-        /*cfg_if! {
+        cfg_if! {
         if #[cfg(feature = "axes_xpos_ypos_zpos")] {
             (acc, gyro)
         } else if #[cfg(feature = "axes_yneg_xpos_zpos")] {
-            (Vector3df32 {
-                    x: -acc.y,                     y: acc.x,                     z: acc.z,
-                },Vector3df32 {
-                    x: -gyro_rps.y,                     y: gyro_rps.x,                     z: gyro_rps.z,
-                })
-        } else {*/
-        const SIN45F: f32 = core::f32::consts::FRAC_1_SQRT_2;
-        const COS45F: f32 = core::f32::consts::FRAC_1_SQRT_2;
-        const SIN135F: f32 = SIN45F;
-        const COS135F: f32 = -COS45F;
-        const SIN225F: f32 = -SIN45F;
-        const COS225F: f32 = -COS45F;
-        const SIN315F: f32 = -SIN45F;
-        const COS315F: f32 = COS45F;
+            (Vector3df32 { x:-acc.y,  y: acc.x,  z: acc.z },
+             Vector3df32 { x:-gyro.y, y: gyro.x, z: gyro.z })
+        } else if #[cfg(feature = "axes_ypos_xneg_zpos")] {
+            (Vector3df32 { x: acc.y,  y: -acc.x,  z: acc.z },
+             Vector3df32 { x: gyro.y, y: -gyro.x, z: gyro.z })
+        } else if #[cfg(feature = "axes_xneg_yneg_zpos")] {
+            (Vector3df32 { x:-acc.x,  y: -acc.y,  z: acc.z },
+             Vector3df32 { x:-gyro.x, y: -gyro.y, z: gyro.z })
+        } else if #[cfg(feature = "axes_xpos_zpos_yneg")] {
+            (Vector3df32 { x: acc.x,  y: acc.z,  z: -acc.y },
+             Vector3df32 { x: gyro.x, y: gyro.z, z: -gyro.y })
+        } else {
+            const SIN45: f32 = core::f32::consts::FRAC_1_SQRT_2;
+            const COS45: f32 = core::f32::consts::FRAC_1_SQRT_2;
+            const SIN135: f32 = SIN45;
+            const COS135: f32 = -COS45;
+            const SIN225: f32 = -SIN45;
+            const COS225: f32 = -COS45;
+            const SIN315: f32 = -SIN45;
+            const COS315: f32 = COS45;
 
-        match self {
-            ImuAxesOrder::XPOS_YPOS_ZPOS => (acc, gyro),
-            ImuAxesOrder::YPOS_XNEG_ZPOS => {
-                (Vector3df32 { x: acc.y, y: -acc.x, z: acc.z }, Vector3df32 { x: gyro.y, y: -gyro.x, z: gyro.z })
+            match self {
+                ImuAxesOrder::XPOS_YPOS_ZPOS => (acc, gyro),
+                ImuAxesOrder::YPOS_XNEG_ZPOS => {
+                    (Vector3df32 { x: acc.y,  y: -acc.x,  z: acc.z },
+                     Vector3df32 { x: gyro.y, y: -gyro.x, z: gyro.z })
+                }
+                ImuAxesOrder::XNEG_YNEG_ZPOS => {
+                    (Vector3df32 { x: -acc.x,  y: -acc.y,  z: acc.z },
+                     Vector3df32 { x: -gyro.x, y: -gyro.y, z: gyro.z })
+                }
+                ImuAxesOrder::YNEG_XPOS_ZPOS => {
+                    (Vector3df32 { x: -acc.y,  y: acc.x,  z: acc.z },
+                     Vector3df32 { x: -gyro.y, y: gyro.x, z: gyro.z })
+                }
+                ImuAxesOrder::XPOS_YNEG_ZNEG => {
+                    (Vector3df32 { x: acc.x,  y: -acc.y,  z: -acc.z },
+                     Vector3df32 { x: gyro.x, y: -gyro.y, z: -gyro.z })
+                }
+                ImuAxesOrder::YPOS_XPOS_ZNEG => {
+                    (Vector3df32 { x: acc.y,  y: acc.x,  z: -acc.z },
+                     Vector3df32 { x: gyro.y, y: gyro.x, z: -gyro.z })
+                }
+                ImuAxesOrder::XNEG_YPOS_ZNEG => {
+                    (Vector3df32 { x: -acc.x,  y: acc.y,  z: -acc.z },
+                     Vector3df32 { x: -gyro.x, y: gyro.y, z: -gyro.z })
+                }
+                ImuAxesOrder::YNEG_XNEG_ZNEG => {
+                    (Vector3df32 { x: -acc.y,  y: -acc.x,  z: -acc.z },
+                     Vector3df32 { x: -gyro.y, y: -gyro.x, z: -gyro.z })
+                }
+                ImuAxesOrder::ZPOS_YNEG_XPOS => {
+                    (Vector3df32 { x: acc.z,  y: -acc.y,  z: acc.x },
+                     Vector3df32 { x: gyro.z, y: -gyro.y, z: gyro.x })
+                }
+                ImuAxesOrder::YPOS_ZPOS_XPOS => {
+                    (Vector3df32 { x: acc.y,  y: acc.z,  z: acc.x },
+                     Vector3df32 { x: gyro.y, y: gyro.z, z: gyro.x })
+                }
+                ImuAxesOrder::ZNEG_YPOS_XPOS => {
+                    (Vector3df32 { x: -acc.z,  y: acc.y,  z: acc.x },
+                     Vector3df32 { x: -gyro.z, y: gyro.y, z: gyro.x })
+                }
+                ImuAxesOrder::YNEG_ZNEG_XPOS => {
+                    (Vector3df32 { x: -acc.y,  y: -acc.z,  z: acc.x },
+                     Vector3df32 { x: -gyro.y, y: -gyro.z, z: gyro.x })
+                }
+                ImuAxesOrder::ZPOS_YPOS_XNEG => {
+                    (Vector3df32 { x: acc.z,  y: acc.y,  z: -acc.x },
+                     Vector3df32 { x: gyro.z, y: gyro.y, z: -gyro.x })
+                }
+                ImuAxesOrder::YPOS_ZNEG_XNEG => {
+                    (Vector3df32 { x: acc.y,  y: -acc.z,  z: -acc.x },
+                     Vector3df32 { x: gyro.y, y: -gyro.z, z: -gyro.x })
+                }
+                ImuAxesOrder::ZNEG_YNEG_XNEG => {
+                    (Vector3df32 { x: -acc.z,  y: -acc.y,  z: -acc.x },
+                     Vector3df32 { x: -gyro.z, y: -gyro.y, z: -gyro.x })
+                }
+                ImuAxesOrder::YNEG_ZPOS_XNEG => {
+                    (Vector3df32 { x: -acc.y,  y: acc.z,  z: -acc.x },
+                     Vector3df32 { x: -gyro.y, y: gyro.z, z: -gyro.x })
+                }
+                ImuAxesOrder::ZPOS_XPOS_YPOS => {
+                    (Vector3df32 { x: acc.z,  y: acc.x,  z: acc.y },
+                     Vector3df32 { x: gyro.z, y: gyro.x, z: gyro.y })
+                }
+                ImuAxesOrder::XNEG_ZPOS_YPOS => {
+                    (Vector3df32 { x: -acc.x,  y: acc.z,  z: acc.y },
+                     Vector3df32 { x: -gyro.x, y: gyro.z, z: gyro.y })
+                }
+                ImuAxesOrder::ZNEG_XNEG_YPOS => {
+                    (Vector3df32 { x: -acc.z,  y: -acc.x,  z: acc.y },
+                     Vector3df32 { x: -gyro.z, y: -gyro.x, z: gyro.y })
+                }
+                ImuAxesOrder::XPOS_ZNEG_YPOS => {
+                    (Vector3df32 { x: acc.x,  y: -acc.z,  z: acc.y },
+                     Vector3df32 { x: gyro.x, y: -gyro.z, z: gyro.y })
+                }
+                ImuAxesOrder::ZPOS_XNEG_YNEG => {
+                    (Vector3df32 { x: acc.z,  y: -acc.x,  z: -acc.y },
+                     Vector3df32 { x: gyro.z, y: -gyro.x, z: -gyro.y })
+                }
+                ImuAxesOrder::XNEG_ZNEG_YNEG => {
+                    (Vector3df32 { x: -acc.x,  y: -acc.z,  z: -acc.y },
+                     Vector3df32 { x: -gyro.x, y: -gyro.z, z: -gyro.y })
+                }
+                ImuAxesOrder::ZNEG_XPOS_YNEG => {
+                    (Vector3df32 { x: -acc.z,  y: acc.x,  z: -acc.y },
+                     Vector3df32 { x: -gyro.z, y: gyro.x, z: -gyro.y })
+                }
+                ImuAxesOrder::XPOS_ZPOS_YNEG => {
+                    (Vector3df32 { x: acc.x,  y: acc.z,  z: -acc.y },
+                     Vector3df32 { x: gyro.x, y: gyro.z, z: -gyro.y })
+                }
+                ImuAxesOrder::XPOS_YPOS_ZPOS_45 => (
+                    Vector3df32 { x: acc.x * COS45 + acc.y * SIN45, y: -acc.x * SIN45 + acc.y * COS45, z: acc.z },
+                    Vector3df32 { x: gyro.x * COS45 + gyro.y * SIN45, y: -gyro.x * SIN45 + gyro.y * COS45, z: gyro.z },
+                ),
+                ImuAxesOrder::YPOS_XNEG_ZPOS_45 => (
+                    Vector3df32 { x: acc.x * COS135 + acc.y * SIN135, y: -acc.x * SIN135 + acc.y * COS135, z: acc.z },
+                    Vector3df32 {
+                        x: gyro.x * COS135 + gyro.y * SIN135,
+                        y: -gyro.x * SIN135 + gyro.y * COS135,
+                        z: gyro.z,
+                    },
+                ),
+                ImuAxesOrder::XNEG_YNEG_ZPOS_45 => (
+                    Vector3df32 { x: acc.x * COS225 + acc.y * SIN225, y: -acc.x * SIN225 + acc.y * COS225, z: acc.z },
+                    Vector3df32 {
+                        x: gyro.x * COS225 + gyro.y * SIN225,
+                        y: -gyro.x * SIN225 + gyro.y * COS225,
+                        z: gyro.z,
+                    },
+                ),
+                ImuAxesOrder::YNEG_XPOS_ZPOS_45 => (
+                    Vector3df32 { x: acc.x * COS315 + acc.y * SIN315, y: -acc.x * SIN315 + acc.y * COS315, z: acc.z },
+                    Vector3df32 {
+                        x: gyro.x * COS315 + gyro.y * SIN315,
+                        y: -gyro.x * SIN315 + gyro.y * COS315,
+                        z: gyro.z,
+                    },
+                ),
             }
-            ImuAxesOrder::XNEG_YNEG_ZPOS => {
-                (Vector3df32 { x: -acc.x, y: -acc.y, z: acc.z }, Vector3df32 { x: -gyro.x, y: -gyro.y, z: gyro.z })
-            }
-            ImuAxesOrder::YNEG_XPOS_ZPOS => {
-                (Vector3df32 { x: -acc.y, y: acc.x, z: acc.z }, Vector3df32 { x: -gyro.y, y: gyro.x, z: gyro.z })
-            }
-            ImuAxesOrder::XPOS_YNEG_ZNEG => {
-                (Vector3df32 { x: acc.x, y: -acc.y, z: -acc.z }, Vector3df32 { x: gyro.x, y: -gyro.y, z: -gyro.z })
-            }
-            ImuAxesOrder::YPOS_XPOS_ZNEG => {
-                (Vector3df32 { x: acc.y, y: acc.x, z: -acc.z }, Vector3df32 { x: gyro.y, y: gyro.x, z: -gyro.z })
-            }
-            ImuAxesOrder::XNEG_YPOS_ZNEG => {
-                (Vector3df32 { x: -acc.x, y: acc.y, z: -acc.z }, Vector3df32 { x: -gyro.x, y: gyro.y, z: -gyro.z })
-            }
-            ImuAxesOrder::YNEG_XNEG_ZNEG => {
-                (Vector3df32 { x: -acc.y, y: -acc.x, z: -acc.z }, Vector3df32 { x: -gyro.y, y: -gyro.x, z: -gyro.z })
-            }
-            ImuAxesOrder::ZPOS_YNEG_XPOS => {
-                (Vector3df32 { x: acc.z, y: -acc.y, z: acc.x }, Vector3df32 { x: gyro.z, y: -gyro.y, z: gyro.x })
-            }
-            ImuAxesOrder::YPOS_ZPOS_XPOS => {
-                (Vector3df32 { x: acc.y, y: acc.z, z: acc.x }, Vector3df32 { x: gyro.y, y: gyro.z, z: gyro.x })
-            }
-            ImuAxesOrder::ZNEG_YPOS_XPOS => {
-                (Vector3df32 { x: -acc.z, y: acc.y, z: acc.x }, Vector3df32 { x: -gyro.z, y: gyro.y, z: gyro.x })
-            }
-            ImuAxesOrder::YNEG_ZNEG_XPOS => {
-                (Vector3df32 { x: -acc.y, y: -acc.z, z: acc.x }, Vector3df32 { x: -gyro.y, y: -gyro.z, z: gyro.x })
-            }
-            ImuAxesOrder::ZPOS_YPOS_XNEG => {
-                (Vector3df32 { x: acc.z, y: acc.y, z: -acc.x }, Vector3df32 { x: gyro.z, y: gyro.y, z: -gyro.x })
-            }
-            ImuAxesOrder::YPOS_ZNEG_XNEG => {
-                (Vector3df32 { x: acc.y, y: -acc.z, z: -acc.x }, Vector3df32 { x: gyro.y, y: -gyro.z, z: -gyro.x })
-            }
-            ImuAxesOrder::ZNEG_YNEG_XNEG => {
-                (Vector3df32 { x: -acc.z, y: -acc.y, z: -acc.x }, Vector3df32 { x: -gyro.z, y: -gyro.y, z: -gyro.x })
-            }
-            ImuAxesOrder::YNEG_ZPOS_XNEG => {
-                (Vector3df32 { x: -acc.y, y: acc.z, z: -acc.x }, Vector3df32 { x: -gyro.y, y: gyro.z, z: -gyro.x })
-            }
-            ImuAxesOrder::ZPOS_XPOS_YPOS => {
-                (Vector3df32 { x: acc.z, y: acc.x, z: acc.y }, Vector3df32 { x: gyro.z, y: gyro.x, z: gyro.y })
-            }
-            ImuAxesOrder::XNEG_ZPOS_YPOS => {
-                (Vector3df32 { x: -acc.x, y: acc.z, z: acc.y }, Vector3df32 { x: -gyro.x, y: gyro.z, z: gyro.y })
-            }
-            ImuAxesOrder::ZNEG_XNEG_YPOS => {
-                (Vector3df32 { x: -acc.z, y: -acc.x, z: acc.y }, Vector3df32 { x: -gyro.z, y: -gyro.x, z: gyro.y })
-            }
-            ImuAxesOrder::XPOS_ZNEG_YPOS => {
-                (Vector3df32 { x: acc.x, y: -acc.z, z: acc.y }, Vector3df32 { x: gyro.x, y: -gyro.z, z: gyro.y })
-            }
-            ImuAxesOrder::ZPOS_XNEG_YNEG => {
-                (Vector3df32 { x: acc.z, y: -acc.x, z: -acc.y }, Vector3df32 { x: gyro.z, y: -gyro.x, z: -gyro.y })
-            }
-            ImuAxesOrder::XNEG_ZNEG_YNEG => {
-                (Vector3df32 { x: -acc.x, y: -acc.z, z: -acc.y }, Vector3df32 { x: -gyro.x, y: -gyro.z, z: -gyro.y })
-            }
-            ImuAxesOrder::ZNEG_XPOS_YNEG => {
-                (Vector3df32 { x: -acc.z, y: acc.x, z: -acc.y }, Vector3df32 { x: -gyro.z, y: gyro.x, z: -gyro.y })
-            }
-            ImuAxesOrder::XPOS_ZPOS_YNEG => {
-                (Vector3df32 { x: acc.x, y: acc.z, z: -acc.y }, Vector3df32 { x: gyro.x, y: gyro.z, z: -gyro.y })
-            }
-            ImuAxesOrder::XPOS_YPOS_ZPOS_45 => (
-                Vector3df32 { x: acc.x * COS45F + acc.y * SIN45F, y: -acc.x * SIN45F + acc.y * COS45F, z: acc.z },
-                Vector3df32 { x: gyro.x * COS45F + gyro.y * SIN45F, y: -gyro.x * SIN45F + gyro.y * COS45F, z: gyro.z },
-            ),
-            ImuAxesOrder::YPOS_XNEG_ZPOS_45 => (
-                Vector3df32 { x: acc.x * COS135F + acc.y * SIN135F, y: -acc.x * SIN135F + acc.y * COS135F, z: acc.z },
-                Vector3df32 {
-                    x: gyro.x * COS135F + gyro.y * SIN135F,
-                    y: -gyro.x * SIN135F + gyro.y * COS135F,
-                    z: gyro.z,
-                },
-            ),
-            ImuAxesOrder::XNEG_YNEG_ZPOS_45 => (
-                Vector3df32 { x: acc.x * COS225F + acc.y * SIN225F, y: -acc.x * SIN225F + acc.y * COS225F, z: acc.z },
-                Vector3df32 {
-                    x: gyro.x * COS225F + gyro.y * SIN225F,
-                    y: -gyro.x * SIN225F + gyro.y * COS225F,
-                    z: gyro.z,
-                },
-            ),
-            ImuAxesOrder::YNEG_XPOS_ZPOS_45 => (
-                Vector3df32 { x: acc.x * COS315F + acc.y * SIN315F, y: -acc.x * SIN315F + acc.y * COS315F, z: acc.z },
-                Vector3df32 {
-                    x: gyro.x * COS315F + gyro.y * SIN315F,
-                    y: -gyro.x * SIN315F + gyro.y * COS315F,
-                    z: gyro.z,
-                },
-            ),
-        }
+        }}
     }
-    //}
-    //}
     #[must_use]
+    #[inline]
     pub fn axes_order_inverse(self) -> Self {
         match self {
             ImuAxesOrder::YPOS_XNEG_ZPOS => ImuAxesOrder::YNEG_XPOS_ZPOS,

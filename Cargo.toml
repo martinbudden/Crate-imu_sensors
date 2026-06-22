@@ -46,9 +46,12 @@ spi = []
 lsm6ds3tr_c = []
 ism330dhcx = []
 lsm6dsox = []
-# Coordinate Orientation Profiles
+# Coordinate Orientation - options to statically map the most common axes orientations.
 axes_xpos_ypos_zpos = []
+axes_ypos_xneg_zpos = []
+axes_xneg_yneg_zpos = []
 axes_yneg_xpos_zpos = []
+axes_xpos_zpos_yneg = []
 
 # Hardware Targets (Select one when building for microcontrollers)
 # The "dep:" prefix activates the optional dependency without exposing it as a feature itself
