@@ -8,6 +8,7 @@ use strum::EnumIter;
 #[allow(non_camel_case_types)]
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, EnumIter, FromPrimitive, IntoPrimitive)]
+#[allow(missing_docs)]
 pub enum ImuAxesOrder {
     #[num_enum(default)]
     XPOS_YPOS_ZPOS = 0,

@@ -87,6 +87,7 @@ const _REG_ZA_OFFSET_H: u8 = 0x7D;
 const _REG_ZA_OFFSET_L: u8 = 0x7E;
 // **** IMU Registers and associated bitflags ****
 
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Mpu6886<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,
@@ -155,6 +156,7 @@ async fn delay_ms(delay: u32) {
 impl<B: ImuBus> Mpu6886<B> {
     const DEVICE_ID: u8 = 0;
 
+    /// Constructor.
     pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
         Self {
             bus,

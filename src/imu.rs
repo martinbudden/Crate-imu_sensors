@@ -7,17 +7,23 @@ use {
 use crate::{ImuAxesOrder, ImuBus};
 use vqm::Vector3df32;
 
+/// Units for acceleration.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum ImuAccScale {
     #[default]
+    /// Acceleration in gravity units.
     G,
+    /// Acceleration in meters per second squared.
     Mps2,
 }
 
+/// Units for gyro rotation.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum ImuGyroScale {
     #[default]
+    /// Degrees per second.
     Dps,
+    /// Radians per second.
     Rps,
 }
 
@@ -36,6 +42,7 @@ pub struct ImuCommon {
     pub axis_order: ImuAxesOrder,
 }
 
+#[allow(missing_docs)]
 impl ImuCommon {
     pub const GYRO_FULL_SCALE_MAX: u8 = 0;
     pub const GYRO_FULL_SCALE_125_DPS: u8 = 1;
@@ -93,6 +100,7 @@ pub struct ImuConfig {
 #[cfg(feature = "serde")]
 impl PostcardValue<'_> for ImuConfig {}
 
+#[allow(missing_docs)]
 impl ImuConfig {
     // Betaflight compatible acc and gyro ids
     // Used for reporting gyro and acc type back to MSP (MultiWii Serial Protocol)
@@ -152,6 +160,7 @@ impl ImuConfig {
     pub const MSP_GYRO_ID_ICM42686P: u16 = 25;
     pub const MSP_GYRO_ID_VIRTUAL: u16 = 26;
 
+    /// Constructor.
     fn new() -> Self {
         Self { gyro_id_msp: 0, acc_id_msp: 0, device_id: 0, address: 0, axis_order: 0, flags: 0 }
     }

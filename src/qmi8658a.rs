@@ -82,6 +82,8 @@ const ACCEL_RANGE_8G: u8 = 0b_0010_0000;
 const ACCEL_RANGE_4G: u8 = 0b_0001_0000;
 const ACCEL_RANGE_2G: u8 = 0b_0000_0000;
 
+#[allow(missing_docs)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Qmi8658a<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,
@@ -151,6 +153,7 @@ impl<B: ImuBus> Qmi8658a<B> {
     pub const MAX_SPI_FREQUENCY_HZ: u32 = 15_000_000;
     const DEVICE_ID: u8 = 0;
 
+    /// Constructor.
     pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
         Self {
             bus,

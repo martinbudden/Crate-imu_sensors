@@ -87,6 +87,7 @@ const _REG_WHO_AM_I: u8 = 0x75;
 /// MPU6000 is SPI variant of MPU6050
 /// MPU6000 and MPU6050 are Big Endian.
 ///
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Mpu6050<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,

@@ -20,6 +20,8 @@ const REG_GYRO_YH: u8 = 0x29;
 const REG_GYRO_ZL: u8 = 0x2A;
 const REG_GYRO_ZH: u8 = 0x2B;
 
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[allow(missing_docs)]
 pub struct ImuMock<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,
@@ -79,6 +81,7 @@ impl<B: ImuBus> Imu for ImuMock<B> {
 }
 
 impl<B: ImuBus> ImuMock<B> {
+    /// Constructor.
     pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
         Self {
             bus,
@@ -96,15 +99,33 @@ impl<B: ImuBus> ImuMock<B> {
 
     pub async fn set_acc(&mut self, acc: Vector3df32) {
         let acc_unscaled = (acc + self.common.acc_offset) / self.common.acc_scale;
-        let acc_i16: Vector3di16 = acc_unscaled.into();
-        let data = acc_i16.to_le_bytes();
+        #[allow(clippy::cast_possible_truncation)]
+        let x16 = acc_unscaled.x as i16;
+        #[allow(clippy::cast_possible_truncation)]
+        let y16 = acc_unscaled.y as i16;
+        #[allow(clippy::cast_possible_truncation)]
+        let z16 = acc_unscaled.z as i16;
+
+        let x = x16.to_le_bytes();
+        let y = y16.to_le_bytes();
+        let z = z16.to_le_bytes();
+        let data = [x[0], x[1], y[0], y[1], z[0], z[1]];
         self.bus().write_registers(0, REG_ACC_XL, &data).await;
     }
 
     pub async fn set_gyro(&mut self, gyro: Vector3df32) {
         let gyro_unscaled = (gyro + self.common.gyro_offset) / self.common.gyro_scale;
-        let gyro_i16: Vector3di16 = gyro_unscaled.into();
-        let data = gyro_i16.to_le_bytes();
+        #[allow(clippy::cast_possible_truncation)]
+        let x16 = gyro_unscaled.x as i16;
+        #[allow(clippy::cast_possible_truncation)]
+        let y16 = gyro_unscaled.y as i16;
+        #[allow(clippy::cast_possible_truncation)]
+        let z16 = gyro_unscaled.z as i16;
+
+        let x = x16.to_le_bytes();
+        let y = y16.to_le_bytes();
+        let z = z16.to_le_bytes();
+        let data = [x[0], x[1], y[0], y[1], z[0], z[1]];
         self.bus().write_registers(0, REG_GYRO_XL, &data).await;
     }
 

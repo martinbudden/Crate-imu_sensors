@@ -165,6 +165,8 @@ const _REG_BANK2_ACCEL_CONFIG_STATIC2: u8 = 0x03;
 const _REG_BANK2_ACCEL_CONFIG_STATIC3: u8 = 0x04;
 const _REG_BANK2_ACCEL_CONFIG_STATIC4: u8 = 0x05;
 
+#[allow(missing_docs)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Imu426xx<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,
@@ -231,6 +233,7 @@ async fn delay_ms(delay: u32) {
 impl<B: ImuBus> Imu426xx<B> {
     const DEVICE_ID: u8 = 0;
 
+    /// Constructor.
     pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
         Self {
             bus,

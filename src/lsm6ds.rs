@@ -143,6 +143,7 @@ const _REG_OUTZ_L_ACC: u8 = 0x2C;
 const _REG_OUTZ_H_ACC: u8 = 0x2D;
 // **** IMU Registers and associated bitflags ****
 
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Lsm6ds<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,
@@ -211,6 +212,7 @@ async fn delay_ms(delay: u32) {
 impl<B: ImuBus> Lsm6ds<B> {
     const DEVICE_ID: u8 = 0x68;
 
+    /// Constructor.
     pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
         Self {
             bus,
