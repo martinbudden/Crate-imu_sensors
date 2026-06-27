@@ -70,6 +70,29 @@ impl<B: ImuBus> Imu for ImuMock<B> {
         self.bus().read_registers(0, REG_ACC_XL, &mut buf).await.expect("read_resisters cannot fail for ImuMock");
         Ok(self.map_acc_gyro(buf, self.common.axis_order))
     }
+
+    #[inline]
+    fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let acc = Vector3df32::from_le_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
+        ImuAxesOrder::map_vector(axis_order, acc)
+    }
+
+    #[inline]
+    fn map_gyro(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let gyro_dps = Vector3df32::from_le_bytes_6(buf) * self.common.gyro_scale - self.common.gyro_offset;
+        ImuAxesOrder::map_vector(axis_order, gyro_dps)
+    }
+
+    #[inline]
+    fn map_acc_gyro(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
+        let acc_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
+        let gyro_buf = [buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]];
+
+        let acc = Vector3df32::from_le_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
+        let gyro = Vector3df32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
+
+        ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro)
+    }
 }
 
 impl<B: ImuBus> ImuMock<B> {
@@ -177,29 +200,6 @@ impl<B: ImuBus> ImuMock<B> {
             _ => 16.0 / 32768.0,
         };
         self.common.acc_scale = if acc_scale == ImuAccScale::G { scale } else { scale * ImuCommon::G0 };
-    }
-
-    #[inline]
-    pub fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
-        let acc = Vector3df32::from_le_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
-        ImuAxesOrder::map_vector(axis_order, acc)
-    }
-
-    #[inline]
-    pub fn map_gyro(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
-        let gyro_dps = Vector3df32::from_le_bytes_6(buf) * self.common.gyro_scale - self.common.gyro_offset;
-        ImuAxesOrder::map_vector(axis_order, gyro_dps)
-    }
-
-    #[inline]
-    pub fn map_acc_gyro(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
-        let acc_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
-        let gyro_buf = [buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]];
-
-        let acc = Vector3df32::from_le_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
-        let gyro = Vector3df32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
-
-        ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro)
     }
 }
 

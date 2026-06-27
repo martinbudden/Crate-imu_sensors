@@ -143,6 +143,29 @@ impl<B: ImuBus> Imu for Qmi8658a<B> {
         self.write_read(&[REG_AX_L], &mut buf).await?;
         Ok(self.map_acc_gyro(buf, self.common.axis_order))
     }
+
+    #[inline]
+    fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let acc = Vector3df32::from_le_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
+        ImuAxesOrder::map_vector(axis_order, acc)
+    }
+
+    #[inline]
+    fn map_gyro(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let gyro = Vector3df32::from_le_bytes_6(buf) * self.common.gyro_scale - self.common.gyro_offset;
+        ImuAxesOrder::map_vector(axis_order, gyro)
+    }
+
+    #[inline]
+    fn map_acc_gyro(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
+        let acc_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
+        let gyro_buf = [buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]];
+
+        let acc = Vector3df32::from_le_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
+        let gyro_rps = Vector3df32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
+
+        ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro_rps)
+    }
 }
 
 async fn delay_ms(delay: u32) {
@@ -294,28 +317,6 @@ impl<B: ImuBus> Qmi8658a<B> {
 
         acc_register_value | acc_odr
     }
-
-    pub fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
-        let acc = Vector3df32::from_le_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
-        ImuAxesOrder::map_vector(axis_order, acc)
-    }
-
-    #[inline]
-    pub fn map_gyro(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
-        let gyro = Vector3df32::from_le_bytes_6(buf) * self.common.gyro_scale - self.common.gyro_offset;
-        ImuAxesOrder::map_vector(axis_order, gyro)
-    }
-
-    #[inline]
-    pub fn map_acc_gyro(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
-        let acc_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
-        let gyro_buf = [buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]];
-
-        let acc = Vector3df32::from_le_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
-        let gyro_rps = Vector3df32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
-
-        ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro_rps)
-    }
 }
 
 #[cfg(test)]
@@ -334,7 +335,7 @@ mod tests {
     const NOOP_VTABLE: RawWakerVTable =
         RawWakerVTable::new(|_| RawWaker::new(core::ptr::null(), &NOOP_VTABLE), |_| {}, |_| {}, |_| {});
 
-    // Your own zero-dependency block_on function
+    // Zero-dependency block_on function
     fn block_on<F: Future>(mut future: F) -> F::Output {
         let mut future = unsafe { core::pin::Pin::new_unchecked(&mut future) };
         let raw_waker = RawWaker::new(core::ptr::null(), &NOOP_VTABLE);

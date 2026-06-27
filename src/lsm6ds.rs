@@ -203,6 +203,29 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
         self.write_read(&[REG_OUTX_L_G], &mut buf).await?;
         Ok(self.map_acc_gyro(buf, self.common.axis_order))
     }
+
+    #[inline]
+    fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let acc = Vector3df32::from_le_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
+        ImuAxesOrder::map_vector(axis_order, acc)
+    }
+
+    #[inline]
+    fn map_gyro(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+        let gyro = Vector3df32::from_le_bytes_6(buf) * self.common.gyro_scale - self.common.gyro_offset;
+        ImuAxesOrder::map_vector(axis_order, gyro)
+    }
+
+    #[inline]
+    fn map_acc_gyro(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
+        let gyro_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
+        let acc_buf = [buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]];
+
+        let acc = Vector3df32::from_le_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
+        let gyro = Vector3df32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
+
+        ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro)
+    }
 }
 
 async fn delay_ms(delay: u32) {
@@ -342,34 +365,13 @@ impl<B: ImuBus> Lsm6ds<B> {
 
         acc_register_value | acc_odr
     }
-
-    #[inline]
-    pub fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
-        let acc = Vector3df32::from_le_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
-        ImuAxesOrder::map_vector(axis_order, acc)
-    }
-
-    #[inline]
-    pub fn map_gyro(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
-        let gyro = Vector3df32::from_le_bytes_6(buf) * self.common.gyro_scale - self.common.gyro_offset;
-        ImuAxesOrder::map_vector(axis_order, gyro)
-    }
-
-    #[inline]
-    pub fn map_acc_gyro(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
-        let gyro_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
-        let acc_buf = [buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]];
-
-        let acc = Vector3df32::from_le_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
-        let gyro = Vector3df32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
-
-        ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro)
-    }
 }
 
 #[cfg(test)]
 mod tests {
+    // we can do float comparisons because all floats have been converted from i16s, and so can be represented exactly.
     #![allow(clippy::float_cmp)]
+
     use super::*;
     use crate::{ImuAxesOrder, MockImuBus};
 
@@ -414,7 +416,6 @@ mod tests {
     #[test]
     fn map_acc() {
         let imu_bus = MockImuBus::new();
-
         let imu: Lsm6ds<MockImuBus> = Lsm6ds::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
