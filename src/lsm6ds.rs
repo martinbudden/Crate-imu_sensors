@@ -182,7 +182,7 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
     {
         let mut buf = [0u8; 6];
         self.write_read(&[REG_OUTX_L_ACC], &mut buf).await?;
-        Ok(self.map_acc(buf, self.common.axis_order))
+        Ok(self.map_acc(buf))
     }
 
     async fn read_gyro(&mut self) -> Result<Vector3df32, Self::Error>
@@ -192,7 +192,7 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
         let mut buf = [0u8; 6];
         self.write_read(&[REG_OUTX_L_G], &mut buf).await?;
         //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
-        Ok(self.map_gyro(buf, self.common.axis_order))
+        Ok(self.map_gyro(buf))
     }
 
     async fn read_acc_gyro(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>
@@ -201,34 +201,34 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
     {
         let mut buf = [0u8; 12];
         self.write_read(&[REG_OUTX_L_G], &mut buf).await?;
-        Ok(self.map_acc_gyro(buf, self.common.axis_order))
+        Ok(self.map_acc_gyro(buf))
     }
 
     #[inline]
-    fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+    fn map_acc(&self, buf: [u8; 6]) -> Vector3df32 {
         let acc = Vector3df32::from_le_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
-        ImuAxesOrder::map_vector(axis_order, acc)
+        ImuAxesOrder::map_vector(self.common.axis_order, acc)
     }
 
     #[inline]
-    fn map_gyro(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32 {
+    fn map_gyro(&self, buf: [u8; 6]) -> Vector3df32 {
         let gyro = Vector3df32::from_le_bytes_6(buf) * self.common.gyro_scale - self.common.gyro_offset;
-        ImuAxesOrder::map_vector(axis_order, gyro)
+        ImuAxesOrder::map_vector(self.common.axis_order, gyro)
     }
 
     #[inline]
-    fn map_acc_gyro(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
+    fn map_acc_gyro(&self, buf: [u8; 12]) -> (Vector3df32, Vector3df32) {
         // note: order is gyro, acc.
         let (gyro_slice, acc_slice) = buf.split_at(6);
 
         let acc = Vector3df32::from_le_slice_6(acc_slice) * self.common.acc_scale - self.common.acc_offset;
         let gyro = Vector3df32::from_le_slice_6(gyro_slice) * self.common.gyro_scale - self.common.gyro_offset;
 
-        ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro)
+        ImuAxesOrder::map_acc_gyro(self.common.axis_order, acc, gyro)
     }
 
     #[inline]
-    fn map_acc_gyro_slice(&self, slice: &[u8], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
+    fn map_acc_gyro_slice(&self, slice: &[u8]) -> (Vector3df32, Vector3df32) {
         // note: order is gyro, acc.
         let gyro_slice = &slice[0..6];
         let acc_slice = &slice[6..12];
@@ -236,7 +236,7 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
         let acc = Vector3df32::from_le_slice_6(acc_slice) * self.common.acc_scale - self.common.acc_offset;
         let gyro = Vector3df32::from_le_slice_6(gyro_slice) * self.common.gyro_scale - self.common.gyro_offset;
 
-        ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro)
+        ImuAxesOrder::map_acc_gyro(self.common.axis_order, acc, gyro)
     }
 }
 
@@ -431,7 +431,7 @@ mod tests {
         let imu: Lsm6ds<MockImuBus> = Lsm6ds::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
-        let acc = imu.map_acc(data, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let acc = imu.map_acc(data);
         assert_eq!(Vector3df32 { x: 0.0, y: 0.0, z: 0.0 }, acc);
     }
 }

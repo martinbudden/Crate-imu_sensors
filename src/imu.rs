@@ -201,13 +201,13 @@ pub trait Imu {
 
     async fn read_acc_gyro(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>;
 
-    fn map_acc(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32;
+    fn map_acc(&self, buf: [u8; 6]) -> Vector3df32;
 
-    fn map_gyro(&self, buf: [u8; 6], axis_order: ImuAxesOrder) -> Vector3df32;
+    fn map_gyro(&self, buf: [u8; 6]) -> Vector3df32;
 
-    fn map_acc_gyro(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32);
+    fn map_acc_gyro(&self, buf: [u8; 12]) -> (Vector3df32, Vector3df32);
 
-    fn map_acc_gyro_slice(&self, slice: &[u8], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32);
+    fn map_acc_gyro_slice(&self, slice: &[u8]) -> (Vector3df32, Vector3df32);
 
     #[inline]
     #[must_use]
