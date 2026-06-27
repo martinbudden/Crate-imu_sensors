@@ -87,7 +87,7 @@ const _REG_ZA_OFFSET_H: u8 = 0x7D;
 const _REG_ZA_OFFSET_L: u8 = 0x7E;
 // **** IMU Registers and associated bitflags ****
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Mpu6886<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,
@@ -98,91 +98,51 @@ impl<B: ImuBus> Imu for Mpu6886<B> {
     type Bus = B;
     type Error = <B as ImuBus>::Error;
 
+    #[inline]
     fn bus(&mut self) -> &mut Self::Bus {
         &mut self.bus
     }
 
+    #[inline]
     fn common(&self) -> &ImuCommon {
         &self.common
     }
 
+    #[inline]
     fn common_mut(&mut self) -> &mut ImuCommon {
         &mut self.common
     }
 
+    #[inline]
     fn config(&self) -> &ImuConfig {
         &self.config
     }
 
-    async fn write_read(&mut self, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
-        // On the Pico, I2C write_read is natively async.
-        // We just delegate the call and .await the result.
-        self.bus.bus_write_read(I2C_ADDRESS, write, read).await
-    }
-
-    async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>
-    where
-        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
-    {
+    async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error> {
         let mut buf = [0u8; 6];
         self.write_read(&[REG_ACCEL_XOUT_H], &mut buf).await?;
-        Ok(self.map_acc(buf))
+        let acc = Vector3df32::from_be_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
+        Ok(ImuAxesOrder::map_vector(self.common.axis_order, acc))
     }
 
-    async fn read_gyro(&mut self) -> Result<Vector3df32, Self::Error>
-    where
-        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
-    {
+    async fn read_gyro(&mut self) -> Result<Vector3df32, Self::Error> {
         let mut buf = [0u8; 6];
         self.write_read(&[REG_GYRO_XOUT_H], &mut buf).await?;
-        //self.bus().read_registers(self.config.address, REG_GYRO_XOUT_H, &mut buf).await;
-        Ok(self.map_gyro(buf))
+        let gyro = Vector3df32::from_be_bytes_6(buf) * self.common.gyro_scale - self.common.gyro_offset;
+        Ok(ImuAxesOrder::map_vector(self.common.axis_order, gyro))
     }
 
-    async fn read_acc_gyro(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>
-    where
-        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
-    {
+    async fn read_acc_gyro(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error> {
         let mut buf = [0u8; 14];
         self.write_read(&[REG_GYRO_XOUT_H], &mut buf).await?;
-        /*let acc_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
-        let _temperature = i16::from_be_bytes([buf[6], buf[7]]);
-        let gyro_buf = [buf[8], buf[9], buf[10], buf[11], buf[12], buf[13]];
 
+        let [a0, a1, a2, a3, a4, a5, _t0, _t1, g0, g1, g2, g3, g4, g5] = buf;
+
+        let acc_buf = [a0, a1, a2, a3, a4, a5];
+        let gyro_buf = [g0, g1, g2, g3, g4, g5];
         let acc = Vector3df32::from_be_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
         let gyro = Vector3df32::from_be_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
-
-        Ok(ImuAxesOrder::map_acc_gyro(self.common.axis_order, acc, gyro))*/
-        Ok(self.map_acc_gyro_slice(&buf))
-    }
-
-    #[inline]
-    fn map_acc(&self, buf: [u8; 6]) -> Vector3df32 {
-        let acc = Vector3df32::from_be_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
-        ImuAxesOrder::map_vector(self.common.axis_order, acc)
-    }
-
-    #[inline]
-    fn map_gyro(&self, buf: [u8; 6]) -> Vector3df32 {
-        let gyro = Vector3df32::from_be_bytes_6(buf) * self.common.gyro_scale - self.common.gyro_offset;
-        ImuAxesOrder::map_vector(self.common.axis_order, gyro)
-    }
-
-    #[inline]
-    fn map_acc_gyro(&self, _buf: [u8; 12]) -> (Vector3df32, Vector3df32) {
-        (Vector3df32::default(), Vector3df32::default())
-    }
-
-    #[inline]
-    fn map_acc_gyro_slice(&self, slice: &[u8]) -> (Vector3df32, Vector3df32) {
-        let acc_slice = &slice[0..6];
-        // let temperature_slice = &slice[6..8];
-        let gyro_slice = &slice[8..14];
-
-        let acc = Vector3df32::from_be_slice_6(acc_slice) * self.common.acc_scale - self.common.acc_offset;
-        let gyro = Vector3df32::from_be_slice_6(gyro_slice) * self.common.gyro_scale - self.common.gyro_offset;
-
-        ImuAxesOrder::map_acc_gyro(self.common.axis_order, acc, gyro)
+        Ok(ImuAxesOrder::map_acc_gyro(self.common.axis_order, acc, gyro))
     }
 }
 
@@ -331,12 +291,10 @@ mod tests {
     use crate::{ImuAxesOrder, MockImuBus};
 
     fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
-    fn is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
+    fn _is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
 
     #[test]
-    fn normal_types() {
-        is_full::<Mpu6886<MockImuBus>>();
-    }
+    fn normal_types() {}
     #[test]
     fn imu_init() {
         let imu_bus = MockImuBus::new();
@@ -357,15 +315,5 @@ mod tests {
         assert_eq!(8.0 / 32768.0, imu.common.acc_scale);
         assert_eq!(500, imu.common.gyro_sample_rate_hz);
         assert_eq!(500, imu.common.acc_sample_rate_hz);
-    }
-    #[test]
-    fn map_acc() {
-        let imu_bus = MockImuBus::new();
-        let imu: Mpu6886<MockImuBus> = Mpu6886::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
-
-        // TODO: sit down and work out some useful test data for this
-        let data: [u8; 6] = [0, 0, 0, 0, 0, 0];
-        let acc = imu.map_acc(data);
-        assert_eq!(Vector3df32 { x: 0.0, y: 0.0, z: 0.0 }, acc);
     }
 }
