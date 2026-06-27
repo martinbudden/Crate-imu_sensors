@@ -218,11 +218,23 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
 
     #[inline]
     fn map_acc_gyro(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
-        let gyro_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
-        let acc_buf = [buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]];
+        // note: order is gyro, acc.
+        let (gyro_slice, acc_slice) = buf.split_at(6);
 
-        let acc = Vector3df32::from_le_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
-        let gyro = Vector3df32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
+        let acc = Vector3df32::from_le_slice_6(acc_slice) * self.common.acc_scale - self.common.acc_offset;
+        let gyro = Vector3df32::from_le_slice_6(gyro_slice) * self.common.gyro_scale - self.common.gyro_offset;
+
+        ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro)
+    }
+
+    #[inline]
+    fn map_acc_gyro_slice(&self, slice: &[u8], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
+        // note: order is gyro, acc.
+        let gyro_slice = &slice[0..6];
+        let acc_slice = &slice[6..12];
+
+        let acc = Vector3df32::from_le_slice_6(acc_slice) * self.common.acc_scale - self.common.acc_offset;
+        let gyro = Vector3df32::from_le_slice_6(gyro_slice) * self.common.gyro_scale - self.common.gyro_offset;
 
         ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro)
     }

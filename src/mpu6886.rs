@@ -145,14 +145,15 @@ impl<B: ImuBus> Imu for Mpu6886<B> {
     {
         let mut buf = [0u8; 14];
         self.write_read(&[REG_GYRO_XOUT_H], &mut buf).await?;
-        let acc_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
+        /*let acc_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
         let _temperature = i16::from_be_bytes([buf[6], buf[7]]);
         let gyro_buf = [buf[8], buf[9], buf[10], buf[11], buf[12], buf[13]];
 
         let acc = Vector3df32::from_be_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
         let gyro = Vector3df32::from_be_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
 
-        Ok(ImuAxesOrder::map_acc_gyro(self.common.axis_order, acc, gyro))
+        Ok(ImuAxesOrder::map_acc_gyro(self.common.axis_order, acc, gyro))*/
+        Ok(self.map_acc_gyro_slice(&buf, self.common.axis_order))
     }
 
     #[inline]
@@ -170,6 +171,18 @@ impl<B: ImuBus> Imu for Mpu6886<B> {
     #[inline]
     fn map_acc_gyro(&self, _buf: [u8; 12], _axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
         (Vector3df32::default(), Vector3df32::default())
+    }
+
+    #[inline]
+    fn map_acc_gyro_slice(&self, slice: &[u8], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32) {
+        let acc_slice = &slice[0..6];
+        // let temperature_slice = &slice[6..8];
+        let gyro_slice = &slice[8..14];
+
+        let acc = Vector3df32::from_be_slice_6(acc_slice) * self.common.acc_scale - self.common.acc_offset;
+        let gyro = Vector3df32::from_be_slice_6(gyro_slice) * self.common.gyro_scale - self.common.gyro_offset;
+
+        ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro)
     }
 }
 

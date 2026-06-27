@@ -207,6 +207,8 @@ pub trait Imu {
 
     fn map_acc_gyro(&self, buf: [u8; 12], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32);
 
+    fn map_acc_gyro_slice(&self, slice: &[u8], axis_order: ImuAxesOrder) -> (Vector3df32, Vector3df32);
+
     #[inline]
     #[must_use]
     fn acc_scale(&self) -> f32 {
