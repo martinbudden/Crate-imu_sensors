@@ -173,10 +173,12 @@ impl Default for ImuConfig {
 }
 
 // Imu trait uses Bus as an associated type.
+#[allow(async_fn_in_trait)]
 pub trait Imu {
     type Bus: ImuBus;
     // This forces the IMU error to be the same as the Bus error
-    type Error: From<<Self::Bus as ImuBus>::Error>;
+    /// The global error type for this IMU, required to be printable and capable of wrapping raw bus transaction failures.
+    type Error: core::fmt::Debug + core::fmt::Display + From<<Self::Bus as ImuBus>::Error>;
 
     const TARGET_OUTPUT_DATA_RATE_MAX: u8 = 0;
 
@@ -185,47 +187,73 @@ pub trait Imu {
     fn common_mut(&mut self) -> &mut ImuCommon;
     fn config(&self) -> &ImuConfig;
 
-    #[allow(async_fn_in_trait)]
-    async fn write_read(&mut self, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error>;
+    //async fn write_read(&mut self, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error>;
+    /// Passes raw payloads straight to the bus. Provided as a default wrapper.
+    #[inline]
+    async fn write_read(&mut self, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
+        let address = self.config().address;
+        self.bus().bus_write_read(address, write, read).await.map_err(Self::Error::from)
+    }
 
-    #[allow(async_fn_in_trait)]
     async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>;
 
-    #[allow(async_fn_in_trait)]
     async fn read_gyro(&mut self) -> Result<Vector3df32, Self::Error>;
 
-    #[allow(async_fn_in_trait)]
     async fn read_acc_gyro(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>;
 
+    #[inline]
+    #[must_use]
     fn acc_scale(&self) -> f32 {
         self.common().acc_scale
     }
+
+    #[inline]
+    #[must_use]
     fn acc_offset(&self) -> Vector3df32 {
         self.common().acc_offset
     }
+
+    #[inline]
     fn set_acc_offset(&mut self, acc_offset: Vector3df32) {
         self.common_mut().acc_offset = acc_offset;
     }
+
+    #[inline]
+    #[must_use]
     fn acc_offset_mapped(&self) -> Vector3df32 {
         self.common().axis_order.map_vector(self.common().acc_offset)
     }
+
+    #[inline]
     fn set_acc_offset_mapped(&mut self, acc_offset: Vector3df32) {
         let acc_offset_mapped = self.common().axis_order.axes_order_inverse().map_vector(acc_offset);
         self.set_acc_offset(acc_offset_mapped);
     }
 
+    #[inline]
+    #[must_use]
     fn gyro_scale(&self) -> f32 {
         self.common().gyro_scale
     }
-    fn gyro_offset_dps(&self) -> Vector3df32 {
+
+    #[inline]
+    #[must_use]
+    fn gyro_offset(&self) -> Vector3df32 {
         self.common().gyro_offset
     }
+
+    #[inline]
     fn set_gyro_offset(&mut self, gyro_offset: Vector3df32) {
         self.common_mut().gyro_offset = gyro_offset;
     }
+
+    #[inline]
+    #[must_use]
     fn gyro_offset_mapped(&self) -> Vector3df32 {
         self.common().axis_order.map_vector(self.common().gyro_offset)
     }
+
+    #[inline]
     fn set_gyro_offset_mapped(&mut self, gyro_offset: Vector3df32) {
         let gyro_offset_mapped = self.common().axis_order.axes_order_inverse().map_vector(gyro_offset);
         self.set_gyro_offset(gyro_offset_mapped);
