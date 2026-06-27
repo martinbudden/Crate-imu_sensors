@@ -208,11 +208,6 @@ impl<B: ImuBus> Mpu6050<B> {
     }
 
     /// # Errors
-    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
-        self.bus.read_register(self.config.address, reg).await
-    }
-
-    /// # Errors
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
@@ -313,6 +308,12 @@ impl<B: ImuBus> Mpu6050<B> {
 
         acc_register_value | acc_odr
     }
+
+    /// # Errors
+    #[cfg(test)]
+    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+        self.bus.read_register(self.config.address, reg).await
+    }
 }
 
 /*
@@ -346,11 +347,12 @@ mod tests {
     use super::*;
     use crate::{ImuAxesOrder, MockImuBus};
 
-    fn is_normal<T: Sized + Send + Sync + Unpin>() {}
+    fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
+    fn is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
 
     #[test]
     fn normal_types() {
-        is_normal::<Mpu6050<MockImuBus>>();
+        is_full::<Mpu6050<MockImuBus>>();
     }
     #[test]
     fn imu_init() {

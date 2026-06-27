@@ -210,11 +210,6 @@ impl<B: ImuBus> Mpu6886<B> {
     }
 
     /// # Errors
-    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
-        self.bus.read_register(self.config.address, reg).await
-    }
-
-    /// # Errors
     #[allow(clippy::items_after_statements)]
     pub async fn init(
         &mut self,
@@ -320,6 +315,12 @@ impl<B: ImuBus> Mpu6886<B> {
 
         AFS_8G << 3
     }
+
+    /// # Errors
+    #[cfg(test)]
+    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+        self.bus.read_register(self.config.address, reg).await
+    }
 }
 
 #[cfg(test)]
@@ -329,11 +330,12 @@ mod tests {
     use super::*;
     use crate::{ImuAxesOrder, MockImuBus};
 
-    fn is_normal<T: Sized + Send + Sync + Unpin>() {}
+    fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
+    fn is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
 
     #[test]
     fn normal_types() {
-        is_normal::<Mpu6886<MockImuBus>>();
+        is_full::<Mpu6886<MockImuBus>>();
     }
     #[test]
     fn imu_init() {

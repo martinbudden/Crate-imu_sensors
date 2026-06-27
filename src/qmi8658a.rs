@@ -204,11 +204,6 @@ impl<B: ImuBus> Qmi8658a<B> {
     }
 
     /// # Errors
-    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
-        self.bus.read_register(self.config.address, reg).await
-    }
-
-    /// # Errors
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
@@ -328,6 +323,12 @@ impl<B: ImuBus> Qmi8658a<B> {
 
         acc_register_value | acc_odr
     }
+
+    /// # Errors
+    #[cfg(test)]
+    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+        self.bus.read_register(self.config.address, reg).await
+    }
 }
 
 #[cfg(test)]
@@ -339,7 +340,8 @@ mod tests {
     use core::future::Future;
     use core::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
 
-    fn is_normal<T: Sized + Send + Sync + Unpin>() {}
+    fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
+    fn is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
 
     // A lightweight VTable for a host spin-loop waker that requires zero allocations
     // Kept here as a reference in case I ever want to get rid of pollster.
@@ -366,7 +368,7 @@ mod tests {
 
     #[test]
     fn normal_types() {
-        is_normal::<Qmi8658a<MockImuBus>>();
+        is_full::<Qmi8658a<MockImuBus>>();
     }
     #[test]
     fn imu_init() {

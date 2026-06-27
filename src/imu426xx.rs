@@ -497,10 +497,12 @@ mod tests {
     use crate::{ImuAxesOrder, MockImuBus};
 
     fn is_normal<T: Sized + Send + Sync + Unpin>() {}
+    fn is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
 
     #[test]
     fn normal_types() {
         is_normal::<Imu426xx<MockImuBus>>();
+        is_full::<Imu426xx<MockImuBus>>();
     }
     #[test]
     fn imu_init() {

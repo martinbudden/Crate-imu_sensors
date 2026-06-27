@@ -79,7 +79,6 @@ impl MockImuBus {
     }
 }
 
-#[allow(clippy::unused_async)]
 impl ImuBus for MockImuBus {
     type Error = core::convert::Infallible;
 
@@ -272,8 +271,7 @@ impl<E> From<E> for SetupError<E> {
 mod tests {
     use super::*;
 
-    #[allow(unused)]
-    fn is_normal<T: Sized + Send + Sync + Unpin>() {}
+    fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
     fn is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
 
     #[test]

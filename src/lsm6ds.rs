@@ -201,7 +201,7 @@ impl<B: ImuBus> Imu for Lsm6ds<B> {
     {
         let mut buf = [0u8; 12];
         self.write_read(&[REG_OUTX_L_G], &mut buf).await?;
-        Ok(self.map_acc_gyro(buf))
+        Ok(self.map_acc_gyro_slice(&buf))
     }
 
     #[inline]
@@ -261,11 +261,6 @@ impl<B: ImuBus> Lsm6ds<B> {
                 flags: 0,
             },
         }
-    }
-
-    #[allow(dead_code)]
-    async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
-        self.bus.read_register(self.config.address, reg).await
     }
 
     /// # Errors
@@ -377,6 +372,11 @@ impl<B: ImuBus> Lsm6ds<B> {
 
         acc_register_value | acc_odr
     }
+
+    #[cfg(test)]
+    async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+        self.bus.read_register(self.config.address, reg).await
+    }
 }
 
 #[cfg(test)]
@@ -387,13 +387,12 @@ mod tests {
     use super::*;
     use crate::{ImuAxesOrder, MockImuBus};
 
-    fn is_normal<T: Sized + Send + Sync + Unpin>() {}
-    #[allow(unused)]
+    fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
     fn is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
 
     #[test]
     fn normal_types() {
-        is_normal::<Lsm6ds<MockImuBus>>();
+        is_full::<Lsm6ds<MockImuBus>>();
     }
     #[test]
     fn imu_init() {

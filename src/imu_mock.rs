@@ -163,11 +163,6 @@ impl<B: ImuBus> ImuMock<B> {
     }
 
     /// # Errors
-    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
-        self.bus.read_register(self.config.address, reg).await
-    }
-
-    /// # Errors
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
@@ -212,6 +207,12 @@ impl<B: ImuBus> ImuMock<B> {
         };
         self.common.acc_scale = if acc_scale == ImuAccScale::G { scale } else { scale * ImuCommon::G0 };
     }
+
+    /// # Errors
+    #[cfg(test)]
+    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+        self.bus.read_register(self.config.address, reg).await
+    }
 }
 
 #[cfg(test)]
@@ -222,11 +223,12 @@ mod tests {
     use super::*;
     use crate::{ImuAxesOrder, MockImuBus};
 
-    fn is_normal<T: Sized + Send + Sync + Unpin>() {}
+    fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
+    fn is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
 
     #[test]
     fn normal_types() {
-        is_normal::<ImuMock<MockImuBus>>();
+        is_full::<ImuMock<MockImuBus>>();
     }
     #[test]
     fn imu_init() {
