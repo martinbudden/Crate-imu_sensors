@@ -1,6 +1,4 @@
-#![allow(unused)]
-use core::f32::consts::PI;
-use vqm::{Vector3d, Vector3df32, Vector3di16};
+use vqm::Vector3df32;
 
 use crate::{
     Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig,
@@ -8,17 +6,17 @@ use crate::{
 };
 
 const REG_ACC_XL: u8 = 0x20;
-const REG_ACC_XH: u8 = 0x21;
-const REG_ACC_YL: u8 = 0x22;
-const REG_ACC_YH: u8 = 0x23;
-const REG_ACC_ZL: u8 = 0x24;
-const REG_ACC_ZH: u8 = 0x25;
+const _REG_ACC_XH: u8 = 0x21;
+const _REG_ACC_YL: u8 = 0x22;
+const _REG_ACC_YH: u8 = 0x23;
+const _REG_ACC_ZL: u8 = 0x24;
+const _REG_ACC_ZH: u8 = 0x25;
 const REG_GYRO_XL: u8 = 0x26;
-const REG_GYRO_XH: u8 = 0x27;
-const REG_GYRO_YL: u8 = 0x28;
-const REG_GYRO_YH: u8 = 0x29;
-const REG_GYRO_ZL: u8 = 0x2A;
-const REG_GYRO_ZH: u8 = 0x2B;
+const _REG_GYRO_XH: u8 = 0x27;
+const _REG_GYRO_YL: u8 = 0x28;
+const _REG_GYRO_YH: u8 = 0x29;
+const _REG_GYRO_ZL: u8 = 0x2A;
+const _REG_GYRO_ZH: u8 = 0x2B;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 #[allow(missing_docs)]
@@ -52,30 +50,24 @@ impl<B: ImuBus> Imu for ImuMock<B> {
         self.bus.bus_write_read(self.config.address, write, read).await
     }
 
-    async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>
-    where
-        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
-    {
+    async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error> {
         let mut buf = [0u8; 6];
-        self.bus().read_registers(0, REG_ACC_XL, &mut buf).await;
+        #[allow(clippy::expect_used)]
+        self.bus().read_registers(0, REG_ACC_XL, &mut buf).await.expect("read_resisters cannot fail for ImuMock");
         Ok(self.map_acc(buf, self.common.axis_order))
     }
 
-    async fn read_gyro(&mut self) -> Result<Vector3df32, Self::Error>
-    where
-        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
-    {
+    async fn read_gyro(&mut self) -> Result<Vector3df32, Self::Error> {
         let mut buf = [0u8; 6];
-        self.bus().read_registers(0, REG_GYRO_XL, &mut buf).await;
+        #[allow(clippy::expect_used)]
+        self.bus().read_registers(0, REG_GYRO_XL, &mut buf).await.expect("read_resisters cannot fail for ImuMock");
         Ok(self.map_gyro(buf, self.common.axis_order))
     }
 
-    async fn read_acc_gyro(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>
-    where
-        <B as ImuBus>::Error: From<<B as ImuBus>::Error>,
-    {
+    async fn read_acc_gyro(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error> {
         let mut buf = [0u8; 12];
-        self.bus().read_registers(0, REG_ACC_XL, &mut buf).await;
+        #[allow(clippy::expect_used)]
+        self.bus().read_registers(0, REG_ACC_XL, &mut buf).await.expect("read_resisters cannot fail for ImuMock");
         Ok(self.map_acc_gyro(buf, self.common.axis_order))
     }
 }
@@ -97,36 +89,43 @@ impl<B: ImuBus> ImuMock<B> {
         }
     }
 
+    /// # Panics
     pub async fn set_acc(&mut self, acc: Vector3df32) {
-        let acc_unscaled = (acc + self.common.acc_offset) / self.common.acc_scale;
+        let acc_unscaled =
+            ((acc + self.common.acc_offset) / self.common.acc_scale).clamp(f32::from(i16::MIN), f32::from(i16::MAX));
         #[allow(clippy::cast_possible_truncation)]
-        let x16 = acc_unscaled.x as i16;
+        let x_i16 = acc_unscaled.x as i16;
         #[allow(clippy::cast_possible_truncation)]
-        let y16 = acc_unscaled.y as i16;
+        let y_i16 = acc_unscaled.y as i16;
         #[allow(clippy::cast_possible_truncation)]
-        let z16 = acc_unscaled.z as i16;
+        let z_i16 = acc_unscaled.z as i16;
 
-        let x = x16.to_le_bytes();
-        let y = y16.to_le_bytes();
-        let z = z16.to_le_bytes();
+        let x = x_i16.to_le_bytes();
+        let y = y_i16.to_le_bytes();
+        let z = z_i16.to_le_bytes();
         let data = [x[0], x[1], y[0], y[1], z[0], z[1]];
-        self.bus().write_registers(0, REG_ACC_XL, &data).await;
+        #[allow(clippy::expect_used)]
+        self.bus().write_registers(0, REG_ACC_XL, &data).await.expect("write_resisters cannot fail for ImuMock");
     }
 
+    /// # Panics
     pub async fn set_gyro(&mut self, gyro: Vector3df32) {
-        let gyro_unscaled = (gyro + self.common.gyro_offset) / self.common.gyro_scale;
-        #[allow(clippy::cast_possible_truncation)]
-        let x16 = gyro_unscaled.x as i16;
-        #[allow(clippy::cast_possible_truncation)]
-        let y16 = gyro_unscaled.y as i16;
-        #[allow(clippy::cast_possible_truncation)]
-        let z16 = gyro_unscaled.z as i16;
+        let gyro_unscaled =
+            ((gyro + self.common.gyro_offset) / self.common.gyro_scale).clamp(f32::from(i16::MIN), f32::from(i16::MAX));
 
-        let x = x16.to_le_bytes();
-        let y = y16.to_le_bytes();
-        let z = z16.to_le_bytes();
+        #[allow(clippy::cast_possible_truncation)]
+        let x_i16 = gyro_unscaled.x as i16;
+        #[allow(clippy::cast_possible_truncation)]
+        let y_i16 = gyro_unscaled.y as i16;
+        #[allow(clippy::cast_possible_truncation)]
+        let z_i16 = gyro_unscaled.z as i16;
+
+        let x = x_i16.to_le_bytes();
+        let y = y_i16.to_le_bytes();
+        let z = z_i16.to_le_bytes();
         let data = [x[0], x[1], y[0], y[1], z[0], z[1]];
-        self.bus().write_registers(0, REG_GYRO_XL, &data).await;
+        #[allow(clippy::expect_used)]
+        self.bus().write_registers(0, REG_GYRO_XL, &data).await.expect("write_resisters cannot fail for ImuMock");
     }
 
     /// # Errors
@@ -158,7 +157,7 @@ impl<B: ImuBus> ImuMock<B> {
         gyro_scale: ImuGyroScale,
         target_output_data_rate_hz: u32,
     ) {
-        let (scale_dps) = match gyro_sensitivity {
+        let scale_dps = match gyro_sensitivity {
             ImuCommon::GYRO_FULL_SCALE_125_DPS => 125.0,
             ImuCommon::GYRO_FULL_SCALE_250_DPS => 250.0,
             ImuCommon::GYRO_FULL_SCALE_500_DPS => 500.0,
@@ -171,7 +170,7 @@ impl<B: ImuBus> ImuMock<B> {
     }
 
     pub fn calculate_acc_scale(&mut self, acc_scale: ImuAccScale, acc_sensitivity: u8) {
-        let (scale) = match acc_sensitivity {
+        let scale = match acc_sensitivity {
             ImuCommon::ACC_FULL_SCALE_2G => 2.0 / 32768.0,
             ImuCommon::ACC_FULL_SCALE_4G => 4.0 / 32768.0,
             ImuCommon::ACC_FULL_SCALE_8G => 8.0 / 32768.0,
@@ -242,7 +241,7 @@ mod tests {
     #[test]
     fn acc_buf() {
         let imu_bus = MockImuBus::new();
-        let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         // TODO: sit down and work out some useful test data for this
         let data: [u8; 6] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
@@ -252,7 +251,7 @@ mod tests {
     #[test]
     fn gyro_buf() {
         let imu_bus = MockImuBus::new();
-        let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
         // TODO: sit down and work out some useful test data for this
         let data: [u8; 6] = [0x10, 0x00, 0x00, 0x01, 0x00, 0x7f];
@@ -275,7 +274,7 @@ mod tests {
         pollster::block_on(imu.set_acc(acc));
 
         let mut buf = [0u8; 6];
-        let result = pollster::block_on(imu.bus().read_registers(0, REG_ACC_XL, &mut buf));
+        let _result = pollster::block_on(imu.bus().read_registers(0, REG_ACC_XL, &mut buf));
         assert_eq!([0x00, 0x08, 0x00, 0x20, 0x00, 0x10], buf);
 
         let a = imu.map_acc(buf, ImuAxesOrder::XPOS_YPOS_ZPOS);
@@ -289,7 +288,7 @@ mod tests {
         let acc = Vector3df32::new(0.5, 2.0, 1.0);
         pollster::block_on(imu.set_acc(acc));
         let result = pollster::block_on(imu.read_acc());
-        let (a) = result.unwrap();
+        let a = result.unwrap();
         assert_eq!(Vector3df32::new(0.5, 2.0, 1.0), a);
     }
     #[test]
@@ -303,28 +302,28 @@ mod tests {
 
         let gyro_dps = Vector3df32::new(125.0, 1000.0, 1750.0);
         pollster::block_on(imu.set_gyro(gyro_dps));
-        let result = pollster::block_on(imu.bus().read_registers(0, REG_GYRO_XL, &mut buf));
+        let _result = pollster::block_on(imu.bus().read_registers(0, REG_GYRO_XL, &mut buf));
         assert_eq!([0x00, 0x08, 0x00, 0x40, 0x00, 0x70], buf);
         let g = imu.map_gyro(buf, ImuAxesOrder::XPOS_YPOS_ZPOS);
-        assert_eq!(Vector3df32 { x: 125.0, y: 1000.0, z: 1750.0 }, gyro_dps);
+        assert_eq!(Vector3df32 { x: 125.0, y: 1000.0, z: 1750.0 }, g);
 
         let gyro_dps = Vector3df32::new(500.0, 1000.0, 2000.0);
         pollster::block_on(imu.set_gyro(gyro_dps));
-        let result = pollster::block_on(imu.bus().read_registers(0, REG_GYRO_XL, &mut buf));
+        let _result = pollster::block_on(imu.bus().read_registers(0, REG_GYRO_XL, &mut buf));
         assert_eq!([0x00, 0x20, 0x00, 0x40, 0xFF, 0x7F], buf);
         let g = imu.map_gyro(buf, ImuAxesOrder::XPOS_YPOS_ZPOS);
         assert_eq!(Vector3df32 { x: 500.0, y: 1000.0, z: 1999.939 }, g);
 
         let gyro_dps = Vector3df32::new(2000.0, 4000.0, 10_000.0);
         pollster::block_on(imu.set_gyro(gyro_dps));
-        let result = pollster::block_on(imu.bus().read_registers(0, REG_GYRO_XL, &mut buf));
+        let _result = pollster::block_on(imu.bus().read_registers(0, REG_GYRO_XL, &mut buf));
         assert_eq!([0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F], buf);
         let g = imu.map_gyro(buf, ImuAxesOrder::XPOS_YPOS_ZPOS);
         assert_eq!(Vector3df32 { x: 1999.939, y: 1999.939, z: 1999.939 }, g);
 
         let gyro_dps = Vector3df32::new(-2000.0, -4000.0, -10_000.0);
         pollster::block_on(imu.set_gyro(gyro_dps));
-        let result = pollster::block_on(imu.bus().read_registers(0, REG_GYRO_XL, &mut buf));
+        let _result = pollster::block_on(imu.bus().read_registers(0, REG_GYRO_XL, &mut buf));
         assert_eq!([0x00, 0x80, 0x00, 0x80, 0x00, 0x80], buf);
         let g = imu.map_gyro(buf, ImuAxesOrder::XPOS_YPOS_ZPOS);
         assert_eq!(Vector3df32 { x: -2000.0, y: -2000.0, z: -2000.0 }, g);
@@ -336,30 +335,28 @@ mod tests {
         let gyro_scale = imu.gyro_scale() * 32768.0;
         assert_eq!(2000.0, gyro_scale);
 
-        let mut buf = [0u8; 6];
-
         let gyro_dps = Vector3df32::new(125.0, 1000.0, 1750.0);
         pollster::block_on(imu.set_gyro(gyro_dps));
         let result = pollster::block_on(imu.read_gyro());
-        let (g) = result.unwrap();
+        let g = result.unwrap();
         assert_eq!(Vector3df32 { x: 125.0, y: 1000.0, z: 1750.0 }, g);
 
         let gyro_dps = Vector3df32::new(500.0, 1000.0, 2000.0);
         pollster::block_on(imu.set_gyro(gyro_dps));
         let result = pollster::block_on(imu.read_gyro());
-        let (g) = result.unwrap();
+        let g = result.unwrap();
         assert_eq!(Vector3df32 { x: 500.0, y: 1000.0, z: 1999.939 }, g);
 
         let gyro_dps = Vector3df32::new(2000.0, 4000.0, 10_000.0);
         pollster::block_on(imu.set_gyro(gyro_dps));
         let result = pollster::block_on(imu.read_gyro());
-        let (g) = result.unwrap();
+        let g = result.unwrap();
         assert_eq!(Vector3df32 { x: 1999.939, y: 1999.939, z: 1999.939 }, g);
 
         let gyro_dps = Vector3df32::new(-2000.0, -4000.0, -10_000.0);
         pollster::block_on(imu.set_gyro(gyro_dps));
         let result = pollster::block_on(imu.read_gyro());
-        let (g) = result.unwrap();
+        let g = result.unwrap();
         assert_eq!(Vector3df32 { x: -2000.0, y: -2000.0, z: -2000.0 }, g);
     }
 }

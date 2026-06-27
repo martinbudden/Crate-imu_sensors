@@ -1,4 +1,3 @@
-#![allow(unused)]
 //use embassy_rp::i2c::{I2c, Async};
 #[cfg(feature = "rp2040")]
 use embassy_rp::gpio::Output;
@@ -9,36 +8,28 @@ use embassy_rp::i2c::{Async, I2c, Instance};
 #[cfg(all(feature = "rp2040", feature = "spi"))]
 use embassy_rp::spi::{Async, Instance, Spi};
 //use embedded_hal::i2c;
-use embedded_hal_async::i2c;
+//use embedded_hal_async::i2c;
 
-use core::convert::Infallible;
-use core::future::Future;
+//use core::future::Future;
 
+#[allow(async_fn_in_trait)]
 pub trait ImuBus {
-    type Error;
+    type Error: core::fmt::Debug + core::fmt::Display;
 
-    #[allow(async_fn_in_trait)]
     async fn bus_write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error>;
-    fn read_register(&mut self, address: u8, reg: u8) -> impl core::future::Future<Output = Result<u8, Self::Error>>;
+
+    fn read_register(&mut self, address: u8, reg: u8) -> impl Future<Output = Result<u8, Self::Error>>;
+
     fn read_registers(
         &mut self,
         address: u8,
         reg: u8,
         data: &mut [u8],
-    ) -> impl core::future::Future<Output = Result<(), Self::Error>>;
+    ) -> impl Future<Output = Result<(), Self::Error>>;
 
-    fn write_register(
-        &mut self,
-        address: u8,
-        reg: u8,
-        data: u8,
-    ) -> impl core::future::Future<Output = Result<(), Self::Error>>;
-    fn write_registers(
-        &mut self,
-        address: u8,
-        reg: u8,
-        data: &[u8],
-    ) -> impl core::future::Future<Output = Result<(), Self::Error>>;
+    fn write_register(&mut self, address: u8, reg: u8, data: u8) -> impl Future<Output = Result<(), Self::Error>>;
+
+    fn write_registers(&mut self, address: u8, reg: u8, data: &[u8]) -> impl Future<Output = Result<(), Self::Error>>;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
