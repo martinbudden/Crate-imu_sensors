@@ -23,6 +23,7 @@
 compile_error!("Features 'i2c' and 'spi' are mutually exclusive and cannot be enabled together.");
 
 mod axes;
+mod bmi270;
 mod i2c;
 mod imu;
 mod imu426xx;
@@ -35,6 +36,7 @@ mod qmi8658a;
 mod spi;
 
 pub use axes::ImuAxesOrder;
+pub use bmi270::Bmi270;
 pub use imu::{Imu, ImuAccScale, ImuCommon, ImuConfig, ImuGyroScale};
 pub use imu_bus::{ImuBus, MockImuBus, SetupError};
 pub use imu_mock::ImuMock;

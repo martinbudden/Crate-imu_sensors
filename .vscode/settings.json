@@ -95,6 +95,7 @@
         "rustversion",
         "scopeguard",
         "sdio",
+        "SENSORTIME",
         "serde",
         "shlex",
         "SIFS",
