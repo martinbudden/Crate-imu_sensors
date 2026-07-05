@@ -133,6 +133,11 @@ impl<B: ImuBus> Qmi8658a<B> {
     }
 
     /// # Errors
+    pub async fn write_register(&mut self, reg: u8, data: u8) -> Result<(), B::Error> {
+        self.bus.write_register(self.config.address, reg, data).await
+    }
+
+    /// # Errors
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
@@ -154,24 +159,24 @@ impl<B: ImuBus> Qmi8658a<B> {
         const ACC_ENABLE: u8 = 0b_0000_0001;
 
         // soft RESET
-        self.bus.write_register(self.config.address, REG_RESET, 0x0b).await?;
+        self.write_register(REG_RESET, 0x0b).await?;
         // soft reset takes a maximum of 15ms
         delay_ms(15).await;
 
         // REG_CTRL1
-        self.bus.write_register(self.config.address, REG_CTRL1, ADDRESS_AUTO_INCREMENT | INT2_ENABLE).await?;
+        self.write_register(REG_CTRL1, ADDRESS_AUTO_INCREMENT | INT2_ENABLE).await?;
         delay_ms(1).await;
 
         // REG_CTRL2
         let acc_register_value =
             self.calculate_acc_scale_and_odr(acc_sensitivity, acc_scale, target_output_data_rate_hz);
-        self.bus.write_register(self.config.address, REG_CTRL2, acc_register_value).await?;
+        self.write_register(REG_CTRL2, acc_register_value).await?;
         delay_ms(1).await;
 
         // REG_CTRL3
         let gyro_register_value =
             self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_scale, target_output_data_rate_hz);
-        self.bus.write_register(self.config.address, REG_CTRL3, gyro_register_value).await?;
+        self.write_register(REG_CTRL3, gyro_register_value).await?;
         delay_ms(1).await;
 
         // No REG_CTRL4
@@ -179,7 +184,7 @@ impl<B: ImuBus> Qmi8658a<B> {
         // No REG_CTRL6
 
         // REG_CTRL7, DRDY is enabled by default, sets INT2 pin high
-        self.bus.write_register(self.config.address, REG_CTRL7, GYRO_ENABLE | ACC_ENABLE).await?;
+        self.write_register(REG_CTRL7, GYRO_ENABLE | ACC_ENABLE).await?;
         delay_ms(1).await;
         // REG_CTRL8 is motion detection - leave all off
 

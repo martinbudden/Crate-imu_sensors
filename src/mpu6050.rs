@@ -162,6 +162,11 @@ impl<B: ImuBus> Mpu6050<B> {
     }
 
     /// # Errors
+    pub async fn write_register(&mut self, reg: u8, data: u8) -> Result<(), B::Error> {
+        self.bus.write_register(self.config.address, reg, data).await
+    }
+
+    /// # Errors
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
@@ -171,9 +176,9 @@ impl<B: ImuBus> Mpu6050<B> {
         acc_scale: ImuAccScale,
     ) -> Result<(u32, u32), B::Error> {
         // clock source: PLL with Z axis gyro reference
-        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, CLKSEL_PLL_Z_AXIS_GYRO).await?;
+        self.write_register(REG_PWR_MGMT_1, CLKSEL_PLL_Z_AXIS_GYRO).await?;
         delay_ms(15).await;
-        self.bus.write_register(self.config.address, REG_PWR_MGMT_2, 0x00).await?;
+        self.write_register(REG_PWR_MGMT_2, 0x00).await?;
         delay_ms(15).await;
 
         /*let id= self.common.bus.read_register(Self::REG_WHO_AM_I).await?;
@@ -191,17 +196,17 @@ impl<B: ImuBus> Mpu6050<B> {
             )
             .await?;
         delay_ms(15).await;
-        self.bus.write_register(self.config.address, REG_INT_ENABLE, DATA_READY_ENABLE).await?;
+        self.write_register(REG_INT_ENABLE, DATA_READY_ENABLE).await?;
         delay_ms(15).await;
 
         // TODO: write _gyro_sample_rate_divider to appropriate register.
         let _gyro_register_value =
             self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_scale, target_output_data_rate_hz);
-        //self.bus.write_register(self.config.address, REG_, gyro_register_value).await?;
+        //self.write_register(REG_, gyro_register_value).await?;
 
         let _acc_register_value =
             self.calculate_acc_scale_and_odr(acc_sensitivity, acc_scale, target_output_data_rate_hz);
-        //self.bus.write_register(self.config.address, REG_, acc_register_value).await?;
+        //self.write_register(REG_, acc_register_value).await?;
 
         // return the gyro and acc sample rates actually set
         Ok((self.common.gyro_sample_rate_hz, self.common.acc_sample_rate_hz))

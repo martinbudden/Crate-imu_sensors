@@ -213,6 +213,11 @@ impl<B: ImuBus> Bmi270<B> {
     }
 
     /// # Errors
+    pub async fn write_register(&mut self, reg: u8, data: u8) -> Result<(), B::Error> {
+        self.bus.write_register(self.config.address, reg, data).await
+    }
+
+    /// # Errors
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
@@ -227,55 +232,55 @@ impl<B: ImuBus> Bmi270<B> {
         const OUTPUT_ENABLE: u8 = 0b_0000_0100;
 
         // Software reset
-        self.bus.write_register(self.config.address, REG_CMD, 0xB6).await?; // Soft reset
+        self.write_register(REG_CMD, 0xB6).await?; // Soft reset
         delay_ms(1).await;
 
         delay_ms(100).await;
         // Power save disabled
-        self.bus.write_register(self.config.address, REG_PWR_CONF, 0x00).await?;
+        self.write_register(REG_PWR_CONF, 0x00).await?;
         // 450us is minimum delay required
         delay_ms(1).await;
 
         // prepare config load
-        self.bus.write_register(self.config.address, REG_INIT_CTRL, 0x00).await?;
+        self.write_register(REG_INIT_CTRL, 0x00).await?;
         delay_ms(1).await;
 
         // Write 8kB initialization data to Register INIT_DATA. This requires 6.6ms at 10 MHz SPI I/F frequency.
         _ = self.load_configuration_data().await?;
 
         // enable gyro, acc and temp sensors
-        self.bus.write_register(self.config.address, REG_PWR_CTRL, 0x0E).await?;
+        self.write_register(REG_PWR_CTRL, 0x0E).await?;
         delay_ms(1).await;
 
         // disable advanced power save, enable FIFO self-wake - power mode
-        self.bus.write_register(self.config.address, REG_PWR_CONF, 0x02).await?;
+        self.write_register(REG_PWR_CONF, 0x02).await?;
         delay_ms(1).await;
 
         // all FIFOs disabled
-        self.bus.write_register(self.config.address, REG_FIFO_CONFIG_1, 0x00).await?;
+        self.write_register(REG_FIFO_CONFIG_1, 0x00).await?;
         delay_ms(1).await;
 
         // configure interrupts
         // enable the data ready interrupt pins 1 and 2
-        self.bus.write_register(self.config.address, REG_INT_MAP_DATA, DATA_READY_INI_1 | DATA_READY_INI_2).await?;
+        self.write_register(REG_INT_MAP_DATA, DATA_READY_INI_1 | DATA_READY_INI_2).await?;
         delay_ms(1).await;
         // input disabled, push-pull are defaults
-        self.bus.write_register(self.config.address, REG_INT1_IO_CTRL, OUTPUT_ENABLE | ACTIVE_HIGH).await?;
+        self.write_register(REG_INT1_IO_CTRL, OUTPUT_ENABLE | ACTIVE_HIGH).await?;
         delay_ms(1).await;
         // input disabled, push-pull are defaults
-        self.bus.write_register(self.config.address, REG_INT2_IO_CTRL, OUTPUT_ENABLE | ACTIVE_HIGH).await?;
+        self.write_register(REG_INT2_IO_CTRL, OUTPUT_ENABLE | ACTIVE_HIGH).await?;
         delay_ms(1).await;
         // interrupt latching off
-        self.bus.write_register(self.config.address, REG_INT_LATCH, 0).await?;
+        self.write_register(REG_INT_LATCH, 0).await?;
         delay_ms(1).await;
 
         let gyro_register_value =
             self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_scale, target_output_data_rate_hz);
-        self.bus.write_register(self.config.address, REG_GYR_CONF, gyro_register_value).await?;
+        self.write_register(REG_GYR_CONF, gyro_register_value).await?;
 
         let acc_register_value =
             self.calculate_acc_scale_and_odr(acc_sensitivity, acc_scale, target_output_data_rate_hz);
-        self.bus.write_register(self.config.address, REG_ACC_CONF, acc_register_value).await?;
+        self.write_register(REG_ACC_CONF, acc_register_value).await?;
 
         // return the gyro and acc sample rates actually set
         Ok((self.common.gyro_sample_rate_hz, self.common.acc_sample_rate_hz))
@@ -383,7 +388,7 @@ impl<B: ImuBus> Bmi270<B> {
         }
 
         // complete config load
-        self.bus.write_register(self.config.address, REG_INIT_CTRL, 0x01).await?;
+        self.write_register(REG_INIT_CTRL, 0x01).await?;
         delay_ms(10).await;
         let internal_status = self.bus.read_register(self.config.address, REG_INTERNAL_STATUS).await?;
         //assert(internal_status == INIT_OK || internal_status == SENSOR_STOPPED);

@@ -196,6 +196,11 @@ impl<B: ImuBus> Lsm6ds<B> {
     }
 
     /// # Errors
+    pub async fn write_register(&mut self, reg: u8, data: u8) -> Result<(), B::Error> {
+        self.bus.write_register(self.config.address, reg, data).await
+    }
+
+    /// # Errors
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
@@ -207,32 +212,33 @@ impl<B: ImuBus> Lsm6ds<B> {
         //if (chip_id != REG_WHO_AM_I_RESPONSE_LSM6DS3TR_C && chip_id != REG_WHO_AM_I_RESPONSE_ISM330DHCX && chip_id != REG_WHO_AM_I_RESPONSE_LSM6DSOX) {
 
         // Software reset
-        self.bus.write_register(self.config.address, REG_CTRL3_C, SW_RESET).await?;
+        self.write_register(REG_CTRL3_C, SW_RESET).await?;
 
         // Set data ready pulsed
-        self.bus.write_register(self.config.address, REG_DATA_READY_PULSE_CONFIG, DATA_READY_PULSED).await?;
+        self.write_register(REG_DATA_READY_PULSE_CONFIG, DATA_READY_PULSED).await?;
         delay_ms(1).await;
 
         // Interrupt pins are by default forced to ground, so active high
         // Enable gyro data ready on INT1 pin
-        self.bus.write_register(self.config.address, REG_INT1_CTRL, INT1_DRDY_G).await?;
+        self.write_register(REG_INT1_CTRL, INT1_DRDY_G).await?;
         delay_ms(1).await;
 
         // Enable gyro data ready on INT2 pin
-        self.bus.write_register(self.config.address, REG_INT2_CTRL, INT2_DRDY_G).await?;
+        self.write_register(REG_INT2_CTRL, INT2_DRDY_G).await?;
         delay_ms(1).await;
 
         // Block Data Update and automatically increment registers when read via serial interface (I2C or SPI)
-        self.bus.write_register(self.config.address, REG_CTRL3_C, BDU | IF_INC).await?;
+        self.write_register(REG_CTRL3_C, BDU | IF_INC).await?;
         delay_ms(1).await;
 
         let gyro_register_value =
             self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_scale, target_output_data_rate_hz);
-        self.bus.write_register(self.config.address, REG_CTRL2_G, gyro_register_value).await?;
+        self.write_register(REG_CTRL2_G, gyro_register_value).await?;
+        delay_ms(1).await;
 
         let acc_register_value =
             self.calculate_acc_scale_and_odr(acc_sensitivity, acc_scale, target_output_data_rate_hz);
-        self.bus.write_register(self.config.address, REG_CTRL1_XL, acc_register_value).await?;
+        self.write_register(REG_CTRL1_XL, acc_register_value).await?;
 
         // return the gyro and acc sample rates actually set
         Ok((self.common.gyro_sample_rate_hz, self.common.acc_sample_rate_hz))

@@ -170,6 +170,11 @@ impl<B: ImuBus> Mpu6886<B> {
     }
 
     /// # Errors
+    pub async fn write_register(&mut self, reg: u8, data: u8) -> Result<(), B::Error> {
+        self.bus.write_register(self.config.address, reg, data).await
+    }
+
+    /// # Errors
     #[allow(clippy::items_after_statements)]
     pub async fn init(
         &mut self,
@@ -183,57 +188,57 @@ impl<B: ImuBus> Mpu6886<B> {
         delay_ms(1).await;
 
         // Clear the power management register.
-        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, 0).await?;
+        self.write_register(REG_PWR_MGMT_1, 0).await?;
         delay_ms(10).await;
 
         // Reset the device.
         const DEVICE_RESET: u8 = 0x01u8 << 7;
-        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, DEVICE_RESET).await?;
+        self.write_register(REG_PWR_MGMT_1, DEVICE_RESET).await?;
         delay_ms(10).await;
 
         // CLKSEL must be set to 001 to achieve full gyroscope performance.
         const CLKSEL_1: u8 = 0x01;
-        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, CLKSEL_1).await?;
+        self.write_register(REG_PWR_MGMT_1, CLKSEL_1).await?;
         delay_ms(10).await;
 
         let (config, divider) =
             self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_scale, target_output_data_rate_hz);
 
-        self.bus.write_register(self.config.address, REG_GYRO_CONFIG, config).await?;
+        self.write_register(REG_GYRO_CONFIG, config).await?;
         delay_ms(1).await;
 
-        self.bus.write_register(self.config.address, REG_SAMPLE_RATE_DIVIDER, divider).await?;
+        self.write_register(REG_SAMPLE_RATE_DIVIDER, divider).await?;
         delay_ms(1).await;
 
         let acc_register_value =
             self.calculate_acc_scale_and_odr(acc_sensitivity, acc_scale, target_output_data_rate_hz);
 
-        self.bus.write_register(self.config.address, REG_ACCEL_CONFIG, acc_register_value).await?;
+        self.write_register(REG_ACCEL_CONFIG, acc_register_value).await?;
         delay_ms(1).await;
 
         // Configure filtering.
         const ACC_FCHOICE_B: u8 = 0x00; // Filter:218.1 3-DB BW (Hz), least filtered 1kHz update variant
-        self.bus.write_register(self.config.address, REG_ACCEL_CONFIG2, ACC_FCHOICE_B).await?;
+        self.write_register(REG_ACCEL_CONFIG2, ACC_FCHOICE_B).await?;
         delay_ms(1).await;
 
         // Configure FIFO.
-        self.bus.write_register(self.config.address, REG_FIFO_ENABLE, 0x00).await?; // FIFO disabled
+        self.write_register(REG_FIFO_ENABLE, 0x00).await?; // FIFO disabled
         delay_ms(1).await;
         const FIFO_MODE_OVERWRITE: u8 = 0b_0100_0000;
-        self.bus.write_register(self.config.address, REG_CONFIG, DLPF_CFG_1 | FIFO_MODE_OVERWRITE).await?;
+        self.write_register(REG_CONFIG, DLPF_CFG_1 | FIFO_MODE_OVERWRITE).await?;
         delay_ms(1).await;
 
         // Configure interrupts.
         // M5 Unified settings
-        //self.bus.write_register(self.config.address, REG_INT_PIN_CFG, 0b_1100_0000).await; // Active low, open drain 50us pulse width, clear on read
-        self.bus.write_register(self.config.address, REG_INT_PIN_CFG, 0x22).await?;
+        //self.write_register(REG_INT_PIN_CFG, 0b_1100_0000).await; // Active low, open drain 50us pulse width, clear on read
+        self.write_register(REG_INT_PIN_CFG, 0x22).await?;
         delay_ms(1).await;
 
         const DATA_RDY_INT_EN: u8 = 0x01;
-        self.bus.write_register(self.config.address, REG_INT_ENABLE, DATA_RDY_INT_EN).await?; // data ready interrupt enabled
+        self.write_register(REG_INT_ENABLE, DATA_RDY_INT_EN).await?; // data ready interrupt enabled
         delay_ms(10).await;
 
-        self.bus.write_register(self.config.address, REG_USER_CTRL, 0x00).await?;
+        self.write_register(REG_USER_CTRL, 0x00).await?;
         delay_ms(1).await;
 
         // return the gyro and acc sample rates actually set

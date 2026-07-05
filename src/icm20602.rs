@@ -167,6 +167,11 @@ impl<B: ImuBus> Icm20602<B> {
     }
 
     /// # Errors
+    pub async fn write_register(&mut self, reg: u8, data: u8) -> Result<(), B::Error> {
+        self.bus.write_register(self.config.address, reg, data).await
+    }
+
+    /// # Errors
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
@@ -183,51 +188,51 @@ impl<B: ImuBus> Icm20602<B> {
         //delay_ms(1);
 
         // clear the power management register
-        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, 0).await?;
+        self.write_register(REG_PWR_MGMT_1, 0).await?;
         delay_ms(10).await;
 
         // reset the device
-        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, DEVICE_RESET).await?;
+        self.write_register(REG_PWR_MGMT_1, DEVICE_RESET).await?;
         delay_ms(10).await;
 
         // CLKSEL must be set to 001 to achieve full gyroscope performance.
-        self.bus.write_register(self.config.address, REG_PWR_MGMT_1, CLKSEL_1).await?;
+        self.write_register(REG_PWR_MGMT_1, CLKSEL_1).await?;
         delay_ms(10).await;
 
-        self.bus.write_register(self.config.address, REG_FIFO_ENABLE, 0x00).await?;
+        self.write_register(REG_FIFO_ENABLE, 0x00).await?;
         delay_ms(1).await;
 
         // Interrupt settings
-        self.bus.write_register(self.config.address, REG_INT_PIN_CFG, 0x22).await?;
+        self.write_register(REG_INT_PIN_CFG, 0x22).await?;
         delay_ms(1).await;
 
         // data ready interrupt enabled
-        self.bus.write_register(self.config.address, REG_INT_ENABLE, DATA_RDY_INT_EN).await?;
+        self.write_register(REG_INT_ENABLE, DATA_RDY_INT_EN).await?;
         delay_ms(10).await;
 
-        self.bus.write_register(self.config.address, REG_USER_CTRL, 0x00).await?;
+        self.write_register(REG_USER_CTRL, 0x00).await?;
         delay_ms(1).await;
         // Gyro scale is fixed at 2000DPS, the maximum supported.
         //enum gyro_scale_e { GFS_250DPS = 0, GFS_500DPS, GFS_1000DPS, GFS_2000DPS };
         //const GYRO_FCHOICE_B:u8 = 0x00; // enables gyro update rate and filter configuration using REG_CONFIG
 
         // FIFO disabled, LPF disabled, base output data rate 8kHz (before divider applied)
-        self.bus.write_register(self.config.address, REG_CONFIG, 0).await?;
+        self.write_register(REG_CONFIG, 0).await?;
         delay_ms(1).await;
         let (gyro_register_value, sample_rate_divider) =
             self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_scale, target_output_data_rate_hz);
-        self.bus.write_register(self.config.address, REG_GYRO_CONFIG, gyro_register_value).await?;
-
+        self.write_register(REG_GYRO_CONFIG, gyro_register_value).await?;
         delay_ms(1).await;
-        self.bus.write_register(self.config.address, REG_SMPLRT_DIV, sample_rate_divider).await?;
+
+        self.write_register(REG_SMPLRT_DIV, sample_rate_divider).await?;
         delay_ms(1).await;
 
         let acc_register_value = self.calculate_acc_scale(acc_sensitivity, acc_scale, target_output_data_rate_hz);
-        self.bus.write_register(self.config.address, REG_ACCEL_CONFIG, acc_register_value).await?;
+        self.write_register(REG_ACCEL_CONFIG, acc_register_value).await?;
         //_acc_resolution = ACC_8G_RES;
         delay_ms(1).await;
 
-        self.bus.write_register(self.config.address, REG_ACCEL_CONFIG2, 0).await?;
+        self.write_register(REG_ACCEL_CONFIG2, 0).await?;
         delay_ms(1).await;
 
         // return the gyro and acc sample rates actually set

@@ -211,6 +211,11 @@ impl<B: ImuBus> Imu426xx<B> {
     }
 
     /// # Errors
+    pub async fn write_register(&mut self, reg: u8, data: u8) -> Result<(), B::Error> {
+        self.bus.write_register(self.config.address, reg, data).await
+    }
+
+    /// # Errors
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
@@ -219,11 +224,11 @@ impl<B: ImuBus> Imu426xx<B> {
         acc_sensitivity: u8,
         acc_scale: ImuAccScale,
     ) -> Result<(u32, u32), B::Error> {
-        self.bus.write_register(self.config.address, REG_BANK_SEL, 0).await?;
-        self.bus.write_register(self.config.address, REG_PWR_MGMT0, PWR_OFF).await?;
+        self.write_register(REG_BANK_SEL, 0).await?;
+        self.write_register(REG_PWR_MGMT0, PWR_OFF).await?;
 
         // default reset configuration
-        self.bus.write_register(self.config.address, REG_DEVICE_CONFIG, DEVICE_CONFIG_DEFAULT).await?;
+        self.write_register(REG_DEVICE_CONFIG, DEVICE_CONFIG_DEFAULT).await?;
         delay_ms(1).await;
 
         /*let chip_id = self.bus.read_register_with_timeout(REG_WHO_AM_I, 100);
@@ -237,50 +242,31 @@ impl<B: ImuBus> Imu426xx<B> {
             const GYRO_AAF_DELT: u8 = 38;
             const GYRO_AAF_DELTSQR: u16 = 1440;
             const GYRO_AAF_BITSH: u8 = 4; // gives 3dB Bandwidth of 2029 Hz
-            self.bus.write_register(self.config.address, REG_BANK_SEL, 1).await?;
-            self.bus.write_register(self.config.address, REG_BANK1_GYRO_CONFIG_STATIC3, GYRO_AAF_DELT).await?;
-            self.bus
-                .write_register(self.config.address, REG_BANK1_GYRO_CONFIG_STATIC4, (GYRO_AAF_DELTSQR & 0xFF) as u8)
-                .await?;
-            self.bus
-                .write_register(
-                    self.config.address,
-                    REG_BANK1_GYRO_CONFIG_STATIC5,
-                    (GYRO_AAF_BITSH << 4) | (GYRO_AAF_DELTSQR >> 8) as u8,
-                )
+            self.write_register(REG_BANK_SEL, 1).await?;
+            self.write_register(REG_BANK1_GYRO_CONFIG_STATIC3, GYRO_AAF_DELT).await?;
+            self.write_register(REG_BANK1_GYRO_CONFIG_STATIC4, (GYRO_AAF_DELTSQR & 0xFF) as u8).await?;
+            self.write_register(REG_BANK1_GYRO_CONFIG_STATIC5, (GYRO_AAF_BITSH << 4) | (GYRO_AAF_DELTSQR >> 8) as u8)
                 .await?;
         }
-        self.bus.write_register(self.config.address, REG_BANK_SEL, 0).await?;
+        self.write_register(REG_BANK_SEL, 0).await?;
 
         // REG_GYRO_CONFIG1 defaults to first order gyro ui filter, 3rd order GYRO_DEC2_M2_ORD filter, so is left unchanged
-        self.bus
-            .write_register(
-                self.config.address,
-                REG_GYRO_ACCEL_CONFIG0,
-                ACCEL_FILTER_LOW_LATENCY | GYRO_FILTER_LOW_LATENCY,
-            )
-            .await?;
+        self.write_register(REG_GYRO_ACCEL_CONFIG0, ACCEL_FILTER_LOW_LATENCY | GYRO_FILTER_LOW_LATENCY).await?;
 
         // Configure interrupts
-        self.bus
-            .write_register(
-                self.config.address,
-                REG_INT_CONFIG,
-                INT1_MODE_PULSED | INT1_DRIVE_CIRCUIT_PUSH_PULL | INT1_POLARITY_ACTIVE_HIGH,
-            )
-            .await?;
-        self.bus.write_register(self.config.address, REG_INT_CONFIG0, INT_CLEAR_ON_STATUS_BIT_READ).await?;
+        self.write_register(
+            REG_INT_CONFIG,
+            INT1_MODE_PULSED | INT1_DRIVE_CIRCUIT_PUSH_PULL | INT1_POLARITY_ACTIVE_HIGH,
+        )
+        .await?;
+        self.write_register(REG_INT_CONFIG0, INT_CLEAR_ON_STATUS_BIT_READ).await?;
 
         // set interrupt pulse duration to 8us and disable de-assert duration, both required for ODR >= 4kHz
-        self.bus
-            .write_register(self.config.address, REG_INT_CONFIG1, INT_TPULSE_DURATION_8US | INT_TDEASSERT_DISABLE)
-            .await?;
-        self.bus.write_register(self.config.address, REG_INT_SOURCE0, INT1_UI_DATA_READY_ENABLED).await?;
+        self.write_register(REG_INT_CONFIG1, INT_TPULSE_DURATION_8US | INT_TDEASSERT_DISABLE).await?;
+        self.write_register(REG_INT_SOURCE0, INT1_UI_DATA_READY_ENABLED).await?;
 
         // Configure INTF
-        self.bus
-            .write_register(self.config.address, REG_INTF_CONFIG0, SENSOR_DATA_LITTLE_ENDIAN | UI_SIFS_CFG_DISABLE_I2C)
-            .await?;
+        self.write_register(REG_INTF_CONFIG0, SENSOR_DATA_LITTLE_ENDIAN | UI_SIFS_CFG_DISABLE_I2C).await?;
         {
             // Disable AFSR to prevent stalls in gyro output (undocumented in datasheet)
             const CONFIG1_DEFAULT_VALUE: u8 = 0b_1001_0001;
@@ -289,35 +275,24 @@ impl<B: ImuBus> Imu426xx<B> {
             //let  intFConfig1 = self.bus.read_register(REG_INTF_CONFIG1);
             //intFConfig1 &= CONFIG1_AFSR_MASK;
             //intFConfig1 |= CONFIG1_AFSR_DISABLE;
-            //self.bus.write_register(self.config.address, REG_INTF_CONFIG1, intFConfig1);
-            self.bus
-                .write_register(
-                    self.config.address,
-                    REG_INTF_CONFIG1,
-                    (CONFIG1_DEFAULT_VALUE & CONFIG1_AFSR_MASK) | CONFIG1_AFSR_DISABLE,
-                )
+            //self.write_register(REG_INTF_CONFIG1, intFConfig1);
+            self.write_register(REG_INTF_CONFIG1, (CONFIG1_DEFAULT_VALUE & CONFIG1_AFSR_MASK) | CONFIG1_AFSR_DISABLE)
                 .await?;
         }
 
         // Turn on gyro and acc on before configuring Output Data Rate(ODR) and Full Scale Rate (FSRP)
-        self.bus
-            .write_register(
-                self.config.address,
-                REG_PWR_MGMT0,
-                PWR_TEMP_ENABLED | PWR_GYRO_LOW_NOISE | PWR_ACCEL_LOW_NOISE,
-            )
-            .await?;
+        self.write_register(REG_PWR_MGMT0, PWR_TEMP_ENABLED | PWR_GYRO_LOW_NOISE | PWR_ACCEL_LOW_NOISE).await?;
         delay_ms(1).await;
 
         let gyro_register_value =
             self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_scale, target_output_data_rate_hz);
 
-        self.bus.write_register(self.config.address, REG_GYRO_CONFIG0, gyro_register_value).await?;
+        self.write_register(REG_GYRO_CONFIG0, gyro_register_value).await?;
         delay_ms(1).await;
 
         let acc_register_value =
             self.calculate_acc_scale_and_odr(acc_sensitivity, acc_scale, target_output_data_rate_hz);
-        self.bus.write_register(self.config.address, REG_ACCEL_CONFIG0, acc_register_value).await?;
+        self.write_register(REG_ACCEL_CONFIG0, acc_register_value).await?;
         delay_ms(1).await;
 
         // return the gyro and acc sample rates actually set
