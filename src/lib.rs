@@ -25,6 +25,7 @@ compile_error!("Features 'i2c' and 'spi' are mutually exclusive and cannot be en
 mod axes;
 mod bmi270;
 mod i2c;
+mod icm20602;
 mod imu;
 mod imu426xx;
 mod imu_bus;
@@ -37,6 +38,7 @@ mod spi;
 
 pub use axes::ImuAxesOrder;
 pub use bmi270::Bmi270;
+pub use icm20602::Icm20602;
 pub use imu::{Imu, ImuAccScale, ImuCommon, ImuConfig, ImuGyroScale};
 pub use imu_bus::{ImuBus, MockImuBus, SetupError};
 pub use imu_mock::ImuMock;

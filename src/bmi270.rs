@@ -15,7 +15,7 @@ const _REG_ERR_REG: u8 = 0x02;
 const _REG_STATUS: u8 = 0x03;
 const _REG_DATA_0: u8 = 0x04; // through to 0x0B are AUX registers
 
-const REG_ACC_X_L: u8 = 0x0C;
+pub const REG_ACC_X_L: u8 = 0x0C;
 const _REG_ACC_X_H: u8 = 0x0D;
 const _REG_ACC_Y_L: u8 = 0x0E;
 const _REG_ACC_Y_H: u8 = 0x0F;
@@ -56,43 +56,17 @@ const _REG_FEAT_PAGE: u8 = 0x2F;
 const _REG_FEATURES: u8 = 0x30; // 16 items
 
 const REG_ACC_CONF: u8 = 0x40;
-const ACC_FILTER_PERFORMANCE_OPTIMIZED: u8 = 0b_1000_0000; // ie not power optimized
-const ACC_ODR_25_HZ: u8 = 0x06;
-const ACC_ODR_50_HZ: u8 = 0x07;
-const ACC_ODR_100_HZ: u8 = 0x08;
-const ACC_ODR_200_HZ: u8 = 0x09;
-const ACC_ODR_400_HZ: u8 = 0x0A;
-const ACC_ODR_800_HZ: u8 = 0x0B;
-const ACC_ODR_1600_HZ: u8 = 0x0C;
 const _ACC_OSR4_AVG1: u8 = 0x00;
 const _ACC_OSR4_AVG2: u8 = 0x10;
 const _ACC_NORM_AVG4: u8 = 0x20;
 const _ACC_CIC_AVG8: u8 = 0x30;
 const _REG_ACC_RANGE: u8 = 0x41;
-const ACC_RANGE_2G: u8 = 0x00;
-const ACC_RANGE_4G: u8 = 0x01;
-const ACC_RANGE_8G: u8 = 0x02;
-const ACC_RANGE_16G: u8 = 0x03;
 const REG_GYR_CONF: u8 = 0x42;
-const GYRO_FILTER_PERFORMANCE_OPTIMIZED: u8 = 0b_1100_0000; // ie not power optimized
-const GYRO_ODR_25_HZ: u8 = 0x06;
-const GYRO_ODR_50_HZ: u8 = 0x07;
-const GYRO_ODR_100_HZ: u8 = 0x08;
-const GYRO_ODR_200_HZ: u8 = 0x09;
-const GYRO_ODR_400_HZ: u8 = 0x0A;
-const GYRO_ODR_800_HZ: u8 = 0x0B;
-const GYRO_ODR_1600_HZ: u8 = 0x0C;
-const GYRO_ODR_3200_HZ: u8 = 0x0D; // for gyro only, acc does not support this rate
 const _GYRO_OSR4: u8 = 0x00; // filter 3dB cutoff:u8 =300Hz at 3200Hz ODR
 const _GYRO_OSR2: u8 = 0x10; // filter 3dB cutoff:u8 =557Hz at 3200Hz ODR
 const _GYRO_NORM: u8 = 0x20; // filter 3dB cutoff:u8 =751Hz at 3200Hz ODR
 const _GYRO_RESERVED: u8 = 0x30;
 const _REG_GYR_RANGE: u8 = 0x43;
-const GYRO_RANGE_125_DPS: u8 = 0x04;
-const GYRO_RANGE_250_DPS: u8 = 0x03;
-const GYRO_RANGE_500_DPS: u8 = 0x02;
-const GYRO_RANGE_1000_DPS: u8 = 0x01;
-const GYRO_RANGE_2000_DPS: u8 = 0x00;
 const _REG_AUX_CONF: u8 = 0x44;
 const _REG_FIFO_DOWNS: u8 = 0x45;
 const _REG_FIFO_WTM_0: u8 = 0x46;
@@ -313,6 +287,21 @@ impl<B: ImuBus> Bmi270<B> {
         gyro_scale: ImuGyroScale,
         target_output_data_rate_hz: u32,
     ) -> u8 {
+        const GYRO_RANGE_125_DPS: u8 = 0x04;
+        const GYRO_RANGE_250_DPS: u8 = 0x03;
+        const GYRO_RANGE_500_DPS: u8 = 0x02;
+        const GYRO_RANGE_1000_DPS: u8 = 0x01;
+        const GYRO_RANGE_2000_DPS: u8 = 0x00;
+        const GYRO_FILTER_PERFORMANCE_OPTIMIZED: u8 = 0b_1100_0000; // ie not power optimized
+        const GYRO_ODR_25_HZ: u8 = 0x06;
+        const GYRO_ODR_50_HZ: u8 = 0x07;
+        const GYRO_ODR_100_HZ: u8 = 0x08;
+        const GYRO_ODR_200_HZ: u8 = 0x09;
+        const GYRO_ODR_400_HZ: u8 = 0x0A;
+        const GYRO_ODR_800_HZ: u8 = 0x0B;
+        const GYRO_ODR_1600_HZ: u8 = 0x0C;
+        const GYRO_ODR_3200_HZ: u8 = 0x0D; // for gyro only, acc does not support this rate
+
         let (scale_dps, gyro_register_value) = match gyro_sensitivity {
             ImuCommon::GYRO_FULL_SCALE_125_DPS => (125.0 / 32768.0, GYRO_RANGE_125_DPS),
             ImuCommon::GYRO_FULL_SCALE_250_DPS => (250.0 / 32768.0, GYRO_RANGE_250_DPS),
@@ -343,6 +332,19 @@ impl<B: ImuBus> Bmi270<B> {
         acc_scale: ImuAccScale,
         target_output_data_rate_hz: u32,
     ) -> u8 {
+        const ACC_FILTER_PERFORMANCE_OPTIMIZED: u8 = 0b_1000_0000; // ie not power optimized
+        const ACC_ODR_25_HZ: u8 = 0x06;
+        const ACC_ODR_50_HZ: u8 = 0x07;
+        const ACC_ODR_100_HZ: u8 = 0x08;
+        const ACC_ODR_200_HZ: u8 = 0x09;
+        const ACC_ODR_400_HZ: u8 = 0x0A;
+        const ACC_ODR_800_HZ: u8 = 0x0B;
+        const ACC_ODR_1600_HZ: u8 = 0x0C;
+        const ACC_RANGE_2G: u8 = 0x00;
+        const ACC_RANGE_4G: u8 = 0x01;
+        const ACC_RANGE_8G: u8 = 0x02;
+        const ACC_RANGE_16G: u8 = 0x03;
+
         let (scale, acc_register_value) = match acc_sensitivity {
             ImuCommon::ACC_FULL_SCALE_2G => (2.0 / 32768.0, ACC_RANGE_2G),
             ImuCommon::ACC_FULL_SCALE_4G => (4.0 / 32768.0, ACC_RANGE_4G),
@@ -366,11 +368,6 @@ impl<B: ImuBus> Bmi270<B> {
         self.common.acc_sample_rate_hz = acc_sample_rate_hz;
 
         acc_register_value | acc_odr | ACC_FILTER_PERFORMANCE_OPTIMIZED
-    }
-
-    #[cfg(test)]
-    async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
-        self.bus.read_register(self.config.address, reg).await
     }
 
     async fn load_configuration_data(&mut self) -> Result<u8, B::Error> {
@@ -839,6 +836,12 @@ mod tests {
 
     fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
     fn _is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
+
+    impl<B: ImuBus> Bmi270<B> {
+        async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+            self.bus.read_register(self.config.address, reg).await
+        }
+    }
 
     #[test]
     fn normal_types() {}

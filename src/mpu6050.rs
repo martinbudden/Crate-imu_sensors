@@ -12,42 +12,34 @@ const _I2C_ADDRESS_ALTERNATIVE: u8 = 0x69;
 // **** IMU Registers and associated bitflags ****
 const _REG_SAMPLE_RATE_DIVIDER: u8 = 0x19;
 const _REG_CONFIG: u8 = 0x1A;
-const _DLPF_CFG_260_HZ: u8 = 0b0000_0000; // FS = 8kHz only
-const _DLPF_CFG_184_HZ: u8 = 0b0000_0001;
-const _DLPF_CFG_94_HZ: u8 = 0b0000_0010;
-const _DLPF_CFG_44_HZ: u8 = 0b0000_0011;
-const _DLPF_CFG_21_HZ: u8 = 0b0000_0100;
-const _DLPF_CFG_10_HZ: u8 = 0b0000_0101;
-const _DLPF_CFG_5_HZ: u8 = 0b0000_0110;
+const _DLPF_CFG_260_HZ: u8 = 0b_0000_0000; // FS = 8kHz only
+const _DLPF_CFG_184_HZ: u8 = 0b_0000_0001;
+const _DLPF_CFG_94_HZ: u8 = 0b_0000_0010;
+const _DLPF_CFG_44_HZ: u8 = 0b_0000_0011;
+const _DLPF_CFG_21_HZ: u8 = 0b_0000_0100;
+const _DLPF_CFG_10_HZ: u8 = 0b_0000_0101;
+const _DLPF_CFG_5_HZ: u8 = 0b_0000_0110;
 
 const _REG_GYRO_CONFIG: u8 = 0x1B;
-const GYRO_RANGE_250_DPS: u8 = 0b0000_0000;
-const GYRO_RANGE_500_DPS: u8 = 0b0000_1000;
-const GYRO_RANGE_1000_DPS: u8 = 0b000_10000;
-const GYRO_RANGE_2000_DPS: u8 = 0b0001_1000;
 
 const _REG_ACCEL_CONFIG: u8 = 0x1C;
-const ACCEL_RANGE_2G: u8 = 0b0000_0000;
-const ACCEL_RANGE_4G: u8 = 0b0000_1000;
-const ACCEL_RANGE_8G: u8 = 0b0001_0000;
-const ACCEL_RANGE_16G: u8 = 0b0001_1000;
 
 const REG_INT_PIN_CONFIG: u8 = 0x37;
-const _INT_LEVEL_ACTIVE_LOW: u8 = 0b1000_0000;
+const _INT_LEVEL_ACTIVE_LOW: u8 = 0b_1000_0000;
 const INT_LEVEL_ACTIVE_HIGH: u8 = 0;
-const _INT_OPEN_DRAIN: u8 = 0b0100_0000;
+const _INT_OPEN_DRAIN: u8 = 0b_0100_0000;
 const INT_PUSH_PULL: u8 = 0;
-const _INT_ENABLE_LATCHED: u8 = 0b0010_0000;
+const _INT_ENABLE_LATCHED: u8 = 0b_0010_0000;
 const INT_ENABLE_PULSE: u8 = 0;
-const INT_CLEAR_READ_ANY: u8 = 0b0001_0000; // cleared on any read
+const INT_CLEAR_READ_ANY: u8 = 0b_0001_0000; // cleared on any read
 const _INT_CLEAR_READ_STATUS: u8 = 0; // cleared only by reading REG_INT_STATUS
-const _FSYNCH_ACTIVE_LOW: u8 = 0b0000_1000; // interrupt on FSYNCH pin active high
+const _FSYNCH_ACTIVE_LOW: u8 = 0b_0000_1000; // interrupt on FSYNCH pin active high
 const _FSYNCH_ACTIVE_HIGH: u8 = 0;
-const _FSYNCH_INT_ENABLE: u8 = 0b0000_0100; // enable interrupt on FSYNCH pin
+const _FSYNCH_INT_ENABLE: u8 = 0b_0000_0100; // enable interrupt on FSYNCH pin
 const FSYNCH_INT_DISABLE: u8 = 0;
 
 const REG_INT_ENABLE: u8 = 0x38;
-const DATA_READY_ENABLE: u8 = 0b0000_0001;
+const DATA_READY_ENABLE: u8 = 0b_0000_0001;
 
 const _REG_INT_STATUS: u8 = 0x3A;
 
@@ -69,7 +61,7 @@ const _REG_GYRO_ZOUT_H: u8 = 0x47;
 const _REG_GYRO_ZOUT_L: u8 = 0x48;
 
 const _REG_USER_CTRL: u8 = 0x6A;
-const _I2C_INTERFACE_DISABLED: u8 = 0b0001_0000;
+const _I2C_INTERFACE_DISABLED: u8 = 0b_0001_0000;
 
 const REG_PWR_MGMT_1: u8 = 0x6B;
 const _CLKSEL_INTERNAL_8_MHZ: u8 = 0x00;
@@ -221,6 +213,11 @@ impl<B: ImuBus> Mpu6050<B> {
         gyro_scale: ImuGyroScale,
         target_output_data_rate_hz: u32,
     ) -> u8 {
+        const GYRO_RANGE_250_DPS: u8 = 0b0000_0000;
+        const GYRO_RANGE_500_DPS: u8 = 0b0000_1000;
+        const GYRO_RANGE_1000_DPS: u8 = 0b000_10000;
+        const GYRO_RANGE_2000_DPS: u8 = 0b0001_1000;
+
         let (scale_dps, gyro_register_value) = match gyro_sensitivity {
             // full scale 125 not supported so use 250 instead.
             ImuCommon::GYRO_FULL_SCALE_125_DPS | ImuCommon::GYRO_FULL_SCALE_250_DPS => {
@@ -251,6 +248,10 @@ impl<B: ImuBus> Mpu6050<B> {
         acc_scale: ImuAccScale,
         target_output_data_rate_hz: u32,
     ) -> u8 {
+        const ACCEL_RANGE_2G: u8 = 0b0000_0000;
+        const ACCEL_RANGE_4G: u8 = 0b0000_1000;
+        const ACCEL_RANGE_8G: u8 = 0b0001_0000;
+        const ACCEL_RANGE_16G: u8 = 0b0001_1000;
         self.common.acc_sample_rate_hz = 1000;
         let (scale, acc_register_value) = match acc_sensitivity {
             ImuCommon::ACC_FULL_SCALE_2G => (2.0 / 32768.0, ACCEL_RANGE_2G),
@@ -269,12 +270,6 @@ impl<B: ImuBus> Mpu6050<B> {
         self.common.acc_sample_rate_hz = acc_sample_rate_hz;
 
         acc_register_value | acc_odr
-    }
-
-    /// # Errors
-    #[cfg(test)]
-    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
-        self.bus.read_register(self.config.address, reg).await
     }
 }
 
@@ -311,6 +306,13 @@ mod tests {
 
     fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
     fn _is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
+
+    impl<B: ImuBus> Mpu6050<B> {
+        /// # Errors
+        pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+            self.bus.read_register(self.config.address, reg).await
+        }
+    }
 
     #[test]
     fn normal_types() {}

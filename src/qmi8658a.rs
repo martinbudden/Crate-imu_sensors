@@ -48,40 +48,6 @@ const _REG_GY_H: u8 = 0x03e;
 const _REG_GZ_L: u8 = 0x03f;
 const _REG_GZ_H: u8 = 0x040;
 
-const GYRO_ODR_7172_P_4_HZ: u8 = 0b_0000_0000;
-const GYRO_ODR_3587_P_2_HZ: u8 = 0b_0000_0001;
-const GYRO_ODR_1793_P_6_HZ: u8 = 0b_0000_0010;
-const GYRO_ODR_896_P_8_HZ: u8 = 0b_0000_0011;
-const GYRO_ODR_448_P_4_HZ: u8 = 0b_0000_0100;
-const GYRO_ODR_224_P_2_HZ: u8 = 0b_0000_0101;
-const GYRO_ODR_112_P_1_HZ: u8 = 0b_0000_0110;
-const GYRO_ODR_56_P_05_HZ: u8 = 0b_0000_0111;
-const GYRO_ODR_28_P_025_HZ: u8 = 0b_0000_1000;
-
-const GYRO_RANGE_2048_DPS: u8 = 0b_0110_0000;
-const GYRO_RANGE_1024_DPS: u8 = 0b_0110_0000;
-const GYRO_RANGE_512_DPS: u8 = 0b_0101_0000;
-const GYRO_RANGE_256_DPS: u8 = 0b_0100_0000;
-const GYRO_RANGE_128_DPS: u8 = 0b_0011_0000;
-const _GYRO_RANGE_64_DPS: u8 = 0b_0010_0000;
-const _GYRO_RANGE_32_DPS: u8 = 0b_0001_0000;
-const _GYRO_RANGE_16_DPS: u8 = 0b_0000_0000;
-
-const ACC_ODR_7172_P_4_HZ: u8 = 0b_0000_0000;
-const ACC_ODR_3587_P_2_HZ: u8 = 0b_0000_0001;
-const ACC_ODR_1793_P_6_HZ: u8 = 0b_0000_0010;
-const ACC_ODR_896_P_8_HZ: u8 = 0b_0000_0011;
-const ACC_ODR_448_P_4_HZ: u8 = 0b_0000_0100;
-const ACC_ODR_224_P_2_HZ: u8 = 0b_0000_0101;
-const ACC_ODR_112_P_1_HZ: u8 = 0b_0000_0110;
-const ACC_ODR_56_P_05_HZ: u8 = 0b_0000_0111;
-const ACC_ODR_28_P_025_HZ: u8 = 0b_0000_1000;
-
-const ACCEL_RANGE_16G: u8 = 0b_0011_0000;
-const ACCEL_RANGE_8G: u8 = 0b_0010_0000;
-const ACCEL_RANGE_4G: u8 = 0b_0001_0000;
-const ACCEL_RANGE_2G: u8 = 0b_0000_0000;
-
 #[allow(missing_docs)]
 #[derive(Debug, PartialEq)]
 pub struct Qmi8658a<B: ImuBus> {
@@ -227,6 +193,25 @@ impl<B: ImuBus> Qmi8658a<B> {
         gyro_scale: ImuGyroScale,
         target_output_data_rate_hz: u32,
     ) -> u8 {
+        const GYRO_ODR_7172_P_4_HZ: u8 = 0b_0000_0000;
+        const GYRO_ODR_3587_P_2_HZ: u8 = 0b_0000_0001;
+        const GYRO_ODR_1793_P_6_HZ: u8 = 0b_0000_0010;
+        const GYRO_ODR_896_P_8_HZ: u8 = 0b_0000_0011;
+        const GYRO_ODR_448_P_4_HZ: u8 = 0b_0000_0100;
+        const GYRO_ODR_224_P_2_HZ: u8 = 0b_0000_0101;
+        const GYRO_ODR_112_P_1_HZ: u8 = 0b_0000_0110;
+        const GYRO_ODR_56_P_05_HZ: u8 = 0b_0000_0111;
+        const GYRO_ODR_28_P_025_HZ: u8 = 0b_0000_1000;
+
+        const GYRO_RANGE_2048_DPS: u8 = 0b_0110_0000;
+        const GYRO_RANGE_1024_DPS: u8 = 0b_0110_0000;
+        const GYRO_RANGE_512_DPS: u8 = 0b_0101_0000;
+        const GYRO_RANGE_256_DPS: u8 = 0b_0100_0000;
+        const GYRO_RANGE_128_DPS: u8 = 0b_0011_0000;
+        const _GYRO_RANGE_64_DPS: u8 = 0b_0010_0000;
+        const _GYRO_RANGE_32_DPS: u8 = 0b_0001_0000;
+        const _GYRO_RANGE_16_DPS: u8 = 0b_0000_0000;
+
         // calculate the GYRO_ODR bit values to write to the REG_GYRO_CONFIG0 register
         let (scale_dps, gyro_register_value) = match gyro_sensitivity {
             ImuCommon::GYRO_FULL_SCALE_125_DPS => (128.0 / 32768.0, GYRO_RANGE_128_DPS),
@@ -259,6 +244,20 @@ impl<B: ImuBus> Qmi8658a<B> {
         acc_scale: ImuAccScale,
         target_output_data_rate_hz: u32,
     ) -> u8 {
+        const ACC_ODR_7172_P_4_HZ: u8 = 0b_0000_0000;
+        const ACC_ODR_3587_P_2_HZ: u8 = 0b_0000_0001;
+        const ACC_ODR_1793_P_6_HZ: u8 = 0b_0000_0010;
+        const ACC_ODR_896_P_8_HZ: u8 = 0b_0000_0011;
+        const ACC_ODR_448_P_4_HZ: u8 = 0b_0000_0100;
+        const ACC_ODR_224_P_2_HZ: u8 = 0b_0000_0101;
+        const ACC_ODR_112_P_1_HZ: u8 = 0b_0000_0110;
+        const ACC_ODR_56_P_05_HZ: u8 = 0b_0000_0111;
+        const ACC_ODR_28_P_025_HZ: u8 = 0b_0000_1000;
+
+        const ACCEL_RANGE_16G: u8 = 0b_0011_0000;
+        const ACCEL_RANGE_8G: u8 = 0b_0010_0000;
+        const ACCEL_RANGE_4G: u8 = 0b_0001_0000;
+        const ACCEL_RANGE_2G: u8 = 0b_0000_0000;
         // calculate the ACCEL_ODR bit values to write to the REG_ACCEL_CONFIG0 register
         let (scale, acc_register_value) = match acc_sensitivity {
             ImuCommon::ACC_FULL_SCALE_2G => (2.0 / 32768.0, ACCEL_RANGE_2G),
@@ -286,12 +285,6 @@ impl<B: ImuBus> Qmi8658a<B> {
 
         acc_register_value | acc_odr
     }
-
-    /// # Errors
-    #[cfg(test)]
-    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
-        self.bus.read_register(self.config.address, reg).await
-    }
 }
 
 #[cfg(test)]
@@ -305,6 +298,13 @@ mod tests {
 
     fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
     fn _is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
+
+    impl<B: ImuBus> Qmi8658a<B> {
+        /// # Errors
+        pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+            self.bus.read_register(self.config.address, reg).await
+        }
+    }
 
     // A lightweight VTable for a host spin-loop waker that requires zero allocations
     // Kept here as a reference in case I ever want to get rid of pollster.

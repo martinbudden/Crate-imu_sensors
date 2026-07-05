@@ -101,6 +101,7 @@
         "SIFS",
         "siphasher",
         "smallvec",
+        "SMPLRT",
         "strsim",
         "syscall",
         "TDEASSERT",

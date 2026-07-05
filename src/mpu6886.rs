@@ -40,8 +40,8 @@ const REG_ACCEL_CONFIG: u8 = 0x1C;
 const REG_ACCEL_CONFIG2: u8 = 0x1D;
 
 const REG_FIFO_ENABLE: u8 = 0x23;
-const _GYRO_FIFO_EN: u8 = 0b000_01000;
-const _ACC_FIFO_EN: u8 = 0b0000_0100;
+const _GYRO_FIFO_EN: u8 = 0b_0000_1000;
+const _ACC_FIFO_EN: u8 = 0b_0000_0100;
 
 const REG_INT_PIN_CFG: u8 = 0x37;
 const REG_INT_ENABLE: u8 = 0x38;
@@ -225,7 +225,7 @@ impl<B: ImuBus> Mpu6886<B> {
 
         // Configure interrupts.
         // M5 Unified settings
-        //self.bus.write_register(self.config.address, REG_INT_PIN_CFG, 0b1100_0000).await; // Active low, open drain 50us pulse width, clear on read
+        //self.bus.write_register(self.config.address, REG_INT_PIN_CFG, 0b_1100_0000).await; // Active low, open drain 50us pulse width, clear on read
         self.bus.write_register(self.config.address, REG_INT_PIN_CFG, 0x22).await?;
         delay_ms(1).await;
 
@@ -275,12 +275,6 @@ impl<B: ImuBus> Mpu6886<B> {
 
         AFS_8G << 3
     }
-
-    /// # Errors
-    #[cfg(test)]
-    pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
-        self.bus.read_register(self.config.address, reg).await
-    }
 }
 
 #[cfg(test)]
@@ -292,6 +286,13 @@ mod tests {
 
     fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
     fn _is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
+
+    impl<B: ImuBus> Mpu6886<B> {
+        /// # Errors
+        pub async fn read_register(&mut self, reg: u8) -> Result<u8, B::Error> {
+            self.bus.read_register(self.config.address, reg).await
+        }
+    }
 
     #[test]
     fn normal_types() {}
