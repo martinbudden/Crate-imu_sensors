@@ -40,24 +40,19 @@ pub trait ImuBus {
     /// Writes a contiguous slice of data starting at a target register.
     ///
     /// # Panics
-    /// Panics if the `data` slice exceeds 63 bytes to protect the stack.
+    /// Panics if the `data` slice exceeds 63 bytes.
     // TODO: optimize ImuBus write_registers
     async fn write_registers(&mut self, address: u8, reg: u8, data: &[u8]) -> Result<(), Self::Error> {
         // Enforce a hard maximum upper bound for your safe stack array allocation
-        const MAX_DATA_LEN: usize = 64;
-        assert!(data.len() < MAX_DATA_LEN, "Data transmission block exceeds maximum scratchpad size");
+        const MAX_WRITE_LEN: usize = 64;
+        assert!(data.len() < MAX_WRITE_LEN - 1, "Data transmission block exceeds maximum size (63) bytes");
 
-        // Prepare a stack scratchpad (+1 byte to account for the leading register byte)
-        let mut scratch = [0u8; MAX_DATA_LEN];
-        scratch[0] = reg;
+        let mut write_buf = [0u8; MAX_WRITE_LEN];
+        write_buf[0] = reg;
+        // Copy the payload into the scratchpad directly following the register byte
+        write_buf[1..=data.len()].copy_from_slice(data);
 
-        // Safely copy the payload into the scratchpad directly following the register byte
-        scratch[1..=data.len()].copy_from_slice(data);
-
-        // Reference the active portion of the stack array dynamically
-        let write_slice = &scratch[0..=data.len()];
-
-        self.bus_write_read(address, write_slice, &mut []).await
+        self.bus_write_read(address, &write_buf[0..=data.len()], &mut []).await
     }
 }
 
@@ -153,14 +148,15 @@ impl<T: Instance> ImuBus for I2c<'_, T, Async> {
         // This is trickier: I2C writes usually need the register and data in one contiguous stream.
         // For no_std, we can use a small local buffer or a loop if the bus supports it.
         // For a simple MPU6050 config, usually we only write 1-2 bytes at a time.
+        const MAX_WRITE_LEN: usize = 64;
+        assert!(data.len() < MAX_WRITE_LEN - 1, "Data transmission block exceeds maximum size (63) bytes");
+        let mut write_buf = [0u8; MAX_WRITE_LEN];
+        write_buf[0] = reg;
+        // Copy the payload into the scratchpad directly following the register byte
+        write_buf[1..=data.len()].copy_from_slice(data);
 
-        // Example for up to 4 bytes of data:
-        let mut buf = [0u8; 5];
-        buf[0] = reg;
-        let len = data.len().min(4);
-        buf[1..=len].copy_from_slice(&data[..len]);
+        self.bus_write_read(address, &write_buf[0..=data.len()], &mut []).await
 
-        self.bus_write_read(address, &buf[..=len], &mut []).await
     }
 }
 
@@ -237,19 +233,15 @@ impl<'d, T: Instance> ImuBus for SpiBusWrapper<'d, T> {
         // To write, we send [register, value] and expect 0 bytes back
         self.bus_write_read(address, &[reg, data], &mut []).await
     }
+    /// # Panics
+    /// Panics if the `data` slice exceeds 63 bytes to protect the stack.
     async fn write_registers(&mut self, address: u8, reg: u8, data: &[u8]) -> Result<(), Self::Error> {
-        // For SPI Write, MSB of register must be 0 (reg & 0x7F)
-        // We send [reg, data[0], data[1], ...]
-
-        // Step 1: Send the register address
-        // We use a dummy read buffer of the same size
-        self.bus_write_read(0, &[reg & 0x7F], &mut [0u8; 1]).await?;
-
-        // Step 2: Send the data bytes
-        // In SPI, as long as CS stays low, the MPU increments the internal register pointer
-        //self.bus_write_read(0, data, &mut data).await?;
-
-        Ok(())
+        const MAX_WRITE_LEN: usize = 64;
+        assert!(data.len() < MAX_WRITE_LEN - 1, "Data transmission block exceeds maximum size (63) bytes");
+        let mut write_buf = [0u8; MAX_WRITE_LEN];
+        write_buf[0] = reg & 0x7F;
+        write_buf[1..=data.len()].copy_from_slice(data);
+        self.bus_write_read(address, &write_buf[..=data.len()], &mut []).await
     }
 }
 
