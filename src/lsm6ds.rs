@@ -3,7 +3,7 @@ use vqm::Vector3df32;
 
 use crate::{
     Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig,
-    imu::{ImuAccScale, ImuGyroScale},
+    imu::{AccFullScale, AccUnits, GyroFullScale, GyroUnits},
 };
 
 const I2C_ADDRESS: u8 = 0x6A;
@@ -204,10 +204,10 @@ impl<B: ImuBus> Lsm6ds<B> {
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
-        gyro_sensitivity: u8,
-        gyro_scale: ImuGyroScale,
-        acc_sensitivity: u8,
-        acc_scale: ImuAccScale,
+        gyro_sensitivity: GyroFullScale,
+        gyro_units: GyroUnits,
+        acc_sensitivity: AccFullScale,
+        acc_units: AccUnits,
     ) -> Result<(u32, u32), B::Error> {
         //if (chip_id != REG_WHO_AM_I_RESPONSE_LSM6DS3TR_C && chip_id != REG_WHO_AM_I_RESPONSE_ISM330DHCX && chip_id != REG_WHO_AM_I_RESPONSE_LSM6DSOX) {
 
@@ -232,12 +232,12 @@ impl<B: ImuBus> Lsm6ds<B> {
         delay_ms(1).await;
 
         let gyro_register_value =
-            self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_scale, target_output_data_rate_hz);
+            self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_units, target_output_data_rate_hz);
         self.write_register(REG_CTRL2_G, gyro_register_value).await?;
         delay_ms(1).await;
 
         let acc_register_value =
-            self.calculate_acc_scale_and_odr(acc_sensitivity, acc_scale, target_output_data_rate_hz);
+            self.calculate_acc_scale_and_odr(acc_sensitivity, acc_units, target_output_data_rate_hz);
         self.write_register(REG_CTRL1_XL, acc_register_value).await?;
 
         // return the gyro and acc sample rates actually set
@@ -246,8 +246,8 @@ impl<B: ImuBus> Lsm6ds<B> {
 
     pub fn calculate_gyro_scale_and_odr(
         &mut self,
-        gyro_sensitivity: u8,
-        gyro_scale: ImuGyroScale,
+        gyro_sensitivity: GyroFullScale,
+        gyro_units: GyroUnits,
         target_output_data_rate_hz: u32,
     ) -> u8 {
         const GYRO_RANGE_125_DPS: u8 = 0b_0010;
@@ -269,14 +269,12 @@ impl<B: ImuBus> Lsm6ds<B> {
         const GYRO_ODR_6664_HZ: u8 = 0b_1010_0000;
 
         let (scale_dps, gyro_register_value) = match gyro_sensitivity {
-            ImuCommon::GYRO_FULL_SCALE_125_DPS | ImuCommon::GYRO_FULL_SCALE_250_DPS => {
-                (245.0 / 32768.0, GYRO_RANGE_125_DPS)
-            }
-            ImuCommon::GYRO_FULL_SCALE_500_DPS => (500.0 / 32768.0, GYRO_RANGE_500_DPS),
-            ImuCommon::GYRO_FULL_SCALE_1000_DPS => (1000.0 / 32768.0, GYRO_RANGE_1000_DPS),
+            GyroFullScale::Scale125Dps | GyroFullScale::Scale250Dps => (245.0 / 32768.0, GYRO_RANGE_125_DPS),
+            GyroFullScale::Scale500Dps => (500.0 / 32768.0, GYRO_RANGE_500_DPS),
+            GyroFullScale::Scale1000Dps => (1000.0 / 32768.0, GYRO_RANGE_1000_DPS),
             _ => (2000.0 / 32768.0, GYRO_RANGE_2000_DPS),
         };
-        self.common.gyro_scale = if gyro_scale == ImuGyroScale::Dps { scale_dps } else { scale_dps.to_radians() };
+        self.common.gyro_scale = if gyro_units == GyroUnits::Dps { scale_dps } else { scale_dps.to_radians() };
 
         let (gyro_sample_rate_hz, gyro_odr) = match target_output_data_rate_hz {
             1667..=3332 => (3332, GYRO_ODR_3332_HZ),
@@ -297,8 +295,8 @@ impl<B: ImuBus> Lsm6ds<B> {
 
     pub fn calculate_acc_scale_and_odr(
         &mut self,
-        acc_sensitivity: u8,
-        acc_scale: ImuAccScale,
+        acc_sensitivity: AccFullScale,
+        acc_units: AccUnits,
         target_output_data_rate_hz: u32,
     ) -> u8 {
         const ACC_RANGE_2G: u8 = 0b_0000;
@@ -317,15 +315,15 @@ impl<B: ImuBus> Lsm6ds<B> {
         const ACC_ODR_6664_HZ: u8 = 0b_1010_0000;
 
         let (scale, acc_register_value) = match acc_sensitivity {
-            ImuCommon::ACC_FULL_SCALE_2G => (2.0 / 32768.0, ACC_RANGE_2G),
-            ImuCommon::ACC_FULL_SCALE_4G => (4.0 / 32768.0, ACC_RANGE_4G),
-            ImuCommon::ACC_FULL_SCALE_8G => (8.0 / 32768.0, ACC_RANGE_8G),
+            AccFullScale::Scale2G => (2.0 / 32768.0, ACC_RANGE_2G),
+            AccFullScale::Scale4G => (4.0 / 32768.0, ACC_RANGE_4G),
+            AccFullScale::Scale8G => (8.0 / 32768.0, ACC_RANGE_8G),
             _ => {
-                // default includes  ImuCommon::ACC_FULL_SCALE_16G
+                // default includes  AccFullScale::Scale16G
                 (16.0 / 32768.0, ACC_RANGE_16G)
             }
         };
-        self.common.acc_scale = if acc_scale == ImuAccScale::G { scale } else { scale * ImuCommon::G0 };
+        self.common.acc_scale = if acc_units == AccUnits::G { scale } else { scale * ImuCommon::G0 };
 
         let (acc_sample_rate_hz, acc_odr) = match target_output_data_rate_hz {
             1667..=3332 => (3332, ACC_ODR_3332_HZ),
@@ -371,13 +369,8 @@ mod tests {
         imu_bus.registers[REG_CTRL3_C as usize] = 4;
         let mut imu: Lsm6ds<MockImuBus> = Lsm6ds::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
-        let result = pollster::block_on(imu.init(
-            8000,
-            ImuCommon::GYRO_FULL_SCALE_MAX,
-            ImuGyroScale::Dps,
-            ImuCommon::ACC_FULL_SCALE_MAX,
-            ImuAccScale::G,
-        ));
+        let result =
+            pollster::block_on(imu.init(8000, GyroFullScale::Max, GyroUnits::Dps, AccFullScale::Max, AccUnits::G));
         let (gyro_odr, acc_odr) = result.unwrap();
 
         assert_eq!(6664, gyro_odr);

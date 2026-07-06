@@ -2,7 +2,7 @@ use vqm::Vector3df32;
 
 use crate::{
     Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig,
-    imu::{ImuAccScale, ImuGyroScale},
+    imu::{AccFullScale, AccUnits, GyroFullScale, GyroUnits},
 };
 
 const REG_ACC_XL: u8 = 0x20;
@@ -141,46 +141,46 @@ impl<B: ImuBus> ImuMock<B> {
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
-        gyro_sensitivity: u8,
-        gyro_scale: ImuGyroScale,
-        acc_sensitivity: u8,
-        acc_scale: ImuAccScale,
+        gyro_sensitivity: GyroFullScale,
+        gyro_units: GyroUnits,
+        acc_sensitivity: AccFullScale,
+        acc_units: AccUnits,
     ) -> Result<(u32, u32), B::Error> {
         self.bus.write_register(0, 0, 0).await?;
 
-        self.calculate_acc_scale(acc_scale, acc_sensitivity);
+        self.calculate_acc_scale(acc_sensitivity, acc_units);
 
-        self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_scale, target_output_data_rate_hz);
+        self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_units, target_output_data_rate_hz);
 
         Ok((0, 0))
     }
 
     pub fn calculate_gyro_scale_and_odr(
         &mut self,
-        gyro_sensitivity: u8,
-        gyro_scale: ImuGyroScale,
+        gyro_sensitivity: GyroFullScale,
+        gyro_units: GyroUnits,
         target_output_data_rate_hz: u32,
     ) {
         let scale_dps = match gyro_sensitivity {
-            ImuCommon::GYRO_FULL_SCALE_125_DPS => 125.0,
-            ImuCommon::GYRO_FULL_SCALE_250_DPS => 250.0,
-            ImuCommon::GYRO_FULL_SCALE_500_DPS => 500.0,
-            ImuCommon::GYRO_FULL_SCALE_1000_DPS => 1000.0,
+            GyroFullScale::Scale125Dps => 125.0,
+            GyroFullScale::Scale250Dps => 250.0,
+            GyroFullScale::Scale500Dps => 500.0,
+            GyroFullScale::Scale1000Dps => 1000.0,
             _ => 2000.0,
         };
-        self.common.gyro_scale = if gyro_scale == ImuGyroScale::Dps { scale_dps } else { scale_dps.to_radians() };
+        self.common.gyro_scale = if gyro_units == GyroUnits::Dps { scale_dps } else { scale_dps.to_radians() };
 
         self.common.gyro_sample_rate_hz = target_output_data_rate_hz;
     }
 
-    pub fn calculate_acc_scale(&mut self, acc_scale: ImuAccScale, acc_sensitivity: u8) {
+    pub fn calculate_acc_scale(&mut self, acc_sensitivity: AccFullScale, acc_units: AccUnits) {
         let scale = match acc_sensitivity {
-            ImuCommon::ACC_FULL_SCALE_2G => 2.0 / 32768.0,
-            ImuCommon::ACC_FULL_SCALE_4G => 4.0 / 32768.0,
-            ImuCommon::ACC_FULL_SCALE_8G => 8.0 / 32768.0,
+            AccFullScale::Scale2G => 2.0 / 32768.0,
+            AccFullScale::Scale4G => 4.0 / 32768.0,
+            AccFullScale::Scale8G => 8.0 / 32768.0,
             _ => 16.0 / 32768.0,
         };
-        self.common.acc_scale = if acc_scale == ImuAccScale::G { scale } else { scale * ImuCommon::G0 };
+        self.common.acc_scale = if acc_units == AccUnits::G { scale } else { scale * ImuCommon::G0 };
     }
 }
 
@@ -209,13 +209,8 @@ mod tests {
         let imu_bus = MockImuBus::new();
         let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
-        let result = pollster::block_on(imu.init(
-            8000,
-            ImuCommon::GYRO_FULL_SCALE_MAX,
-            ImuGyroScale::Dps,
-            ImuCommon::ACC_FULL_SCALE_MAX,
-            ImuAccScale::G,
-        ));
+        let result =
+            pollster::block_on(imu.init(8000, GyroFullScale::Max, GyroUnits::Dps, AccFullScale::Max, AccUnits::G));
         let (gyro_register_value, acc_register_value) = result.unwrap();
 
         assert_eq!(0, gyro_register_value);

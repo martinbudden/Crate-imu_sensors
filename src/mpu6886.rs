@@ -3,7 +3,7 @@ use vqm::Vector3df32;
 
 use crate::{
     Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig,
-    imu::{ImuAccScale, ImuGyroScale},
+    imu::{AccFullScale, AccUnits, GyroFullScale, GyroUnits},
 };
 
 const I2C_ADDRESS: u8 = 0x68;
@@ -179,10 +179,10 @@ impl<B: ImuBus> Mpu6886<B> {
     pub async fn init(
         &mut self,
         target_output_data_rate_hz: u32,
-        gyro_sensitivity: u8,
-        gyro_scale: ImuGyroScale,
-        acc_sensitivity: u8,
-        acc_scale: ImuAccScale,
+        gyro_sensitivity: GyroFullScale,
+        gyro_units: GyroUnits,
+        acc_sensitivity: AccFullScale,
+        acc_units: AccUnits,
     ) -> Result<(u32, u32), B::Error> {
         let _chip_id = self.bus.read_register(self.config.address, REG_WHO_AM_I).await;
         delay_ms(1).await;
@@ -202,7 +202,7 @@ impl<B: ImuBus> Mpu6886<B> {
         delay_ms(10).await;
 
         let (config, divider) =
-            self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_scale, target_output_data_rate_hz);
+            self.calculate_gyro_scale_and_odr(gyro_sensitivity, gyro_units, target_output_data_rate_hz);
 
         self.write_register(REG_GYRO_CONFIG, config).await?;
         delay_ms(1).await;
@@ -211,7 +211,7 @@ impl<B: ImuBus> Mpu6886<B> {
         delay_ms(1).await;
 
         let acc_register_value =
-            self.calculate_acc_scale_and_odr(acc_sensitivity, acc_scale, target_output_data_rate_hz);
+            self.calculate_acc_scale_and_odr(acc_sensitivity, acc_units, target_output_data_rate_hz);
 
         self.write_register(REG_ACCEL_CONFIG, acc_register_value).await?;
         delay_ms(1).await;
@@ -247,14 +247,14 @@ impl<B: ImuBus> Mpu6886<B> {
 
     pub fn calculate_gyro_scale_and_odr(
         &mut self,
-        _gyro_sensitivity: u8,
-        gyro_scale: ImuGyroScale,
+        _gyro_sensitivity: GyroFullScale,
+        gyro_units: GyroUnits,
         _target_output_data_rate_hz: u32,
     ) -> (u8, u8) {
         const GFS_2000DPS: u8 = 3;
         const GYRO_FCHOICE_B: u8 = 0x00; // enables gyro update rate and filter configuration using REG_CONFIG
         self.common.gyro_scale = 2000.0 / 32768.0;
-        if gyro_scale == ImuGyroScale::Rps {
+        if gyro_units == GyroUnits::Rps {
             self.common.gyro_scale = self.common.gyro_scale.to_radians();
         }
         // M5Stack default divider is two, giving 500Hz output rate
@@ -265,15 +265,15 @@ impl<B: ImuBus> Mpu6886<B> {
 
     pub fn calculate_acc_scale_and_odr(
         &mut self,
-        _acc_sensitivity: u8,
-        acc_scale: ImuAccScale,
+        _acc_sensitivity: AccFullScale,
+        acc_scale: AccUnits,
         _target_output_data_rate_hz: u32,
     ) -> u8 {
         // Accelerometer scale is fixed at 8G, the maximum supported.
         //enum acc_scale_e { AFS_2G = 0, AFS_4G = 1, AFS_8G = 2, AFS_16G = 3 };
         const AFS_8G: u8 = 2;
         self.common.acc_scale = 8.0 / 32768.0;
-        if acc_scale == ImuAccScale::Mps2 {
+        if acc_scale == AccUnits::Mps2 {
             self.common.acc_scale *= ImuCommon::G0;
         }
         self.common.acc_sample_rate_hz = self.common.gyro_sample_rate_hz;
@@ -287,7 +287,10 @@ mod tests {
     // we can do float comparisons because all floats have been converted from i16s, and so can be represented exactly.
     #![allow(clippy::float_cmp)]
     use super::*;
-    use crate::{ImuAxesOrder, MockImuBus};
+    use crate::{
+        ImuAxesOrder, MockImuBus,
+        imu::{AccFullScale, AccUnits, GyroFullScale, GyroUnits},
+    };
 
     fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
     fn _is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
@@ -306,13 +309,8 @@ mod tests {
         let imu_bus = MockImuBus::new();
         let mut imu: Mpu6886<MockImuBus> = Mpu6886::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
 
-        let result = pollster::block_on(imu.init(
-            8000,
-            ImuCommon::GYRO_FULL_SCALE_MAX,
-            ImuGyroScale::Dps,
-            ImuCommon::ACC_FULL_SCALE_MAX,
-            ImuAccScale::G,
-        ));
+        let result =
+            pollster::block_on(imu.init(8000, GyroFullScale::Max, GyroUnits::Dps, AccFullScale::Max, AccUnits::G));
         let (gyro_sample_rate_hz, acc_sample_rate_hz) = result.unwrap();
 
         assert_eq!(500, gyro_sample_rate_hz);

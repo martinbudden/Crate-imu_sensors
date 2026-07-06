@@ -156,7 +156,6 @@ impl<T: Instance> ImuBus for I2c<'_, T, Async> {
         write_buf[1..=data.len()].copy_from_slice(data);
 
         self.bus_write_read(address, &write_buf[0..=data.len()], &mut []).await
-
     }
 }
 

@@ -7,9 +7,22 @@ use {
 use crate::{ImuAxesOrder, ImuBus};
 use vqm::Vector3df32;
 
+/// Accelerometer scale factor.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum AccFullScale {
+    #[default]
+    Max = 0,
+    Scale1G = 1,
+    Scale2G = 2,
+    Scale4G = 3,
+    Scale8G = 4,
+    Scale16G = 5,
+    Scale32G = 6,
+}
+
 /// Units for acceleration.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub enum ImuAccScale {
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum AccUnits {
     #[default]
     /// Acceleration in gravity units.
     G,
@@ -17,9 +30,22 @@ pub enum ImuAccScale {
     Mps2,
 }
 
+/// Gyro scale factor.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum GyroFullScale {
+    #[default]
+    Max = 0,
+    Scale125Dps = 1,
+    Scale250Dps = 2,
+    Scale500Dps = 3,
+    Scale1000Dps = 4,
+    Scale2000Dps = 5,
+    Scale4000Dps = 6,
+}
+
 /// Units for gyro rotation.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub enum ImuGyroScale {
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum GyroUnits {
     #[default]
     /// Degrees per second.
     Dps,
@@ -44,22 +70,7 @@ pub struct ImuCommon {
 
 #[allow(missing_docs)]
 impl ImuCommon {
-    pub const GYRO_FULL_SCALE_MAX: u8 = 0;
-    pub const GYRO_FULL_SCALE_125_DPS: u8 = 1;
-    pub const GYRO_FULL_SCALE_250_DPS: u8 = 2;
-    pub const GYRO_FULL_SCALE_500_DPS: u8 = 3;
-    pub const GYRO_FULL_SCALE_1000_DPS: u8 = 4;
-    pub const GYRO_FULL_SCALE_2000_DPS: u8 = 5;
-    pub const GYRO_FULL_SCALE_4000_DPS: u8 = 6;
-
     pub const G0: f32 = 9.806_65;
-    pub const ACC_FULL_SCALE_MAX: u8 = 0;
-    pub const ACC_FULL_SCALE_1G: u8 = 1;
-    pub const ACC_FULL_SCALE_2G: u8 = 2;
-    pub const ACC_FULL_SCALE_4G: u8 = 3;
-    pub const ACC_FULL_SCALE_8G: u8 = 4;
-    pub const ACC_FULL_SCALE_16G: u8 = 5;
-    pub const ACC_FULL_SCALE_32G: u8 = 6;
 
     #[must_use]
     pub const fn new(axis_order: ImuAxesOrder) -> Self {

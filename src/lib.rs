@@ -39,7 +39,7 @@ mod spi;
 pub use axes::ImuAxesOrder;
 pub use bmi270::Bmi270;
 pub use icm20602::Icm20602;
-pub use imu::{Imu, ImuAccScale, ImuCommon, ImuConfig, ImuGyroScale};
+pub use imu::{AccFullScale, AccUnits, GyroFullScale, GyroUnits, Imu, ImuCommon, ImuConfig};
 pub use imu_bus::{ImuBus, MockImuBus, SetupError};
 pub use imu_mock::ImuMock;
 pub use imu426xx::Imu426xx;
