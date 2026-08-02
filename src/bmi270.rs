@@ -1,5 +1,5 @@
 use embassy_time::{Duration, Timer};
-use vqm::Vector3df32;
+use vqm::Vector3f32;
 
 use crate::{
     Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig,
@@ -161,21 +161,21 @@ impl<B: ImuBus> Imu for Bmi270<B> {
         &self.config
     }
 
-    async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error> {
+    async fn read_acc(&mut self) -> Result<Vector3f32, Self::Error> {
         let mut buf = [0u8; 6];
         self.write_read(&[REG_ACC_X_L], &mut buf).await?;
-        let acc = Vector3df32::from_le_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
+        let acc = Vector3f32::from_le_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
         Ok(ImuAxesOrder::map_vector(self.common.axis_order, acc))
     }
 
-    async fn read_gyro(&mut self) -> Result<Vector3df32, Self::Error> {
+    async fn read_gyro(&mut self) -> Result<Vector3f32, Self::Error> {
         let mut buf = [0u8; 6];
         self.write_read(&[REG_GYRO_X_L], &mut buf).await?;
-        let gyro = Vector3df32::from_le_bytes_6(buf) * self.common.gyro_scale - self.common.gyro_offset;
+        let gyro = Vector3f32::from_le_bytes_6(buf) * self.common.gyro_scale - self.common.gyro_offset;
         Ok(ImuAxesOrder::map_vector(self.common.axis_order, gyro))
     }
 
-    async fn read_acc_gyro(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error> {
+    async fn read_acc_gyro(&mut self) -> Result<(Vector3f32, Vector3f32), Self::Error> {
         let mut buf = [0u8; 12];
         self.write_read(&[REG_ACC_X_L], &mut buf).await?;
 
@@ -183,8 +183,8 @@ impl<B: ImuBus> Imu for Bmi270<B> {
 
         let acc_buf = [a0, a1, a2, a3, a4, a5];
         let gyro_buf = [g0, g1, g2, g3, g4, g5];
-        let acc = Vector3df32::from_le_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
-        let gyro = Vector3df32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
+        let acc = Vector3f32::from_le_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
+        let gyro = Vector3f32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
         Ok(ImuAxesOrder::map_acc_gyro(self.common.axis_order, acc, gyro))
     }
 }

@@ -5,7 +5,7 @@ use {
 };
 
 use crate::{ImuAxesOrder, ImuBus};
-use vqm::Vector3df32;
+use vqm::Vector3f32;
 
 /// Accelerometer scale factor.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -56,10 +56,10 @@ pub enum GyroUnits {
 // Shared data members
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ImuCommon {
-    pub acc_offset: Vector3df32,
+    pub acc_offset: Vector3f32,
     pub acc_scale: f32,
 
-    pub gyro_offset: Vector3df32,
+    pub gyro_offset: Vector3f32,
     pub gyro_scale: f32,
 
     pub acc_sample_rate_hz: u32,
@@ -77,9 +77,9 @@ impl ImuCommon {
         const GYRO_2000DPS_RES: f32 = 2000.0 / 32768.0;
         const ACC_8G_RES: f32 = 8.0 / 32768.0;
         Self {
-            acc_offset: Vector3df32::new(0.0, 0.0, 0.0),
+            acc_offset: Vector3f32::new(0.0, 0.0, 0.0),
             acc_scale: ACC_8G_RES,
-            gyro_offset: Vector3df32::new(0.0, 0.0, 0.0),
+            gyro_offset: Vector3f32::new(0.0, 0.0, 0.0),
             gyro_scale: GYRO_2000DPS_RES,
             gyro_sample_rate_hz: 1000,
             acc_sample_rate_hz: 1000,
@@ -206,11 +206,11 @@ pub trait Imu {
         self.bus().bus_write_read(address, write, read).await.map_err(Self::Error::from)
     }
 
-    async fn read_acc(&mut self) -> Result<Vector3df32, Self::Error>;
+    async fn read_acc(&mut self) -> Result<Vector3f32, Self::Error>;
 
-    async fn read_gyro(&mut self) -> Result<Vector3df32, Self::Error>;
+    async fn read_gyro(&mut self) -> Result<Vector3f32, Self::Error>;
 
-    async fn read_acc_gyro(&mut self) -> Result<(Vector3df32, Vector3df32), Self::Error>;
+    async fn read_acc_gyro(&mut self) -> Result<(Vector3f32, Vector3f32), Self::Error>;
 
     #[inline]
     #[must_use]
@@ -220,23 +220,23 @@ pub trait Imu {
 
     #[inline]
     #[must_use]
-    fn acc_offset(&self) -> Vector3df32 {
+    fn acc_offset(&self) -> Vector3f32 {
         self.common().acc_offset
     }
 
     #[inline]
-    fn set_acc_offset(&mut self, acc_offset: Vector3df32) {
+    fn set_acc_offset(&mut self, acc_offset: Vector3f32) {
         self.common_mut().acc_offset = acc_offset;
     }
 
     #[inline]
     #[must_use]
-    fn acc_offset_mapped(&self) -> Vector3df32 {
+    fn acc_offset_mapped(&self) -> Vector3f32 {
         self.common().axis_order.map_vector(self.common().acc_offset)
     }
 
     #[inline]
-    fn set_acc_offset_mapped(&mut self, acc_offset: Vector3df32) {
+    fn set_acc_offset_mapped(&mut self, acc_offset: Vector3f32) {
         let acc_offset_mapped = self.common().axis_order.axes_order_inverse().map_vector(acc_offset);
         self.set_acc_offset(acc_offset_mapped);
     }
@@ -249,23 +249,23 @@ pub trait Imu {
 
     #[inline]
     #[must_use]
-    fn gyro_offset(&self) -> Vector3df32 {
+    fn gyro_offset(&self) -> Vector3f32 {
         self.common().gyro_offset
     }
 
     #[inline]
-    fn set_gyro_offset(&mut self, gyro_offset: Vector3df32) {
+    fn set_gyro_offset(&mut self, gyro_offset: Vector3f32) {
         self.common_mut().gyro_offset = gyro_offset;
     }
 
     #[inline]
     #[must_use]
-    fn gyro_offset_mapped(&self) -> Vector3df32 {
+    fn gyro_offset_mapped(&self) -> Vector3f32 {
         self.common().axis_order.map_vector(self.common().gyro_offset)
     }
 
     #[inline]
-    fn set_gyro_offset_mapped(&mut self, gyro_offset: Vector3df32) {
+    fn set_gyro_offset_mapped(&mut self, gyro_offset: Vector3f32) {
         let gyro_offset_mapped = self.common().axis_order.axes_order_inverse().map_vector(gyro_offset);
         self.set_gyro_offset(gyro_offset_mapped);
     }
