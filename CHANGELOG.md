@@ -9,13 +9,30 @@ that is each release may contain incompatible API changes.
 
 Once the API has stabilized this project will adopt semantic versioning, the first release to do so will be `0.2.0`.
 
-## [Unreleased]
+## [0.1.3] - 2026-08-04
 
 ### Added
 
+- BMI279 driver.
+- ICM200602 driver.
+- feature flag for static mapping of IMU axes.
+- clamping to `ImuMock` `set_acc` and `set_gyro`.
+- default implementation of `ImuBus` trait.
+- `map_acc_gyro_slice` function to `Imu` trait.
+
 ### Changed
 
+- updated to `vqm` 0.1.14.
+- set gyro and acc scales in `init`.
+- improved documentation.
+- moved `map_acc`, `map_gyro`, and `map_acc_gyro` functions into `Imu` trait.
+- improved IMU testing.
+- tidied IMU implementations, especially use of registers.
+- made use of `enum`s for acc and gyro scaling consistent.
+
 ### Removed
+
+- `axis_order` parameter from `map_acc`, `map_gyro` etc functions.
 
 ### Deprecated
 
@@ -23,7 +40,7 @@ Once the API has stabilized this project will adopt semantic versioning, the fir
 
 ### Security
 
-## [0.1.2] - 2026-05-34
+## [0.1.2] - 2026-05-24
 
 ### Added
 
