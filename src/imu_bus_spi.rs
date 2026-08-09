@@ -1,0 +1,58 @@
+use embedded_hal_async::spi::{Operation, SpiDevice};
+
+use crate::imu_bus::ImuBus;
+
+#[allow(unused)]
+#[derive(Debug)]
+pub enum ImuSpiError<E> {
+    Bus(E),
+    MissingRegister,
+}
+impl<E: core::fmt::Debug> core::fmt::Display for ImuSpiError<E> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Bus(error) => write!(f, "IMU SPI error: {error:?}"),
+            Self::MissingRegister => write!(f, "IMU SPI transaction has no register address"),
+        }
+    }
+}
+impl<E> From<E> for ImuSpiError<E> {
+    fn from(error: E) -> Self {
+        Self::Bus(error)
+    }
+}
+#[allow(unused)]
+pub struct ImuSpiBus<SPI> {
+    bus: SPI,
+}
+
+impl<SPI> ImuSpiBus<SPI> {
+    #[allow(unused)]
+    pub fn new(bus: SPI) -> Self {
+        Self { bus }
+    }
+}
+
+impl<SPI> ImuBus for ImuSpiBus<SPI>
+where
+    SPI: SpiDevice,
+{
+    type Error = ImuSpiError<SPI::Error>;
+
+    async fn bus_write_read(&mut self, _address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
+        if read.is_empty() {
+            self.bus.write(write).await.map_err(ImuSpiError::Bus)
+        } else {
+            // Register read.
+            // SPI reads require bit 7 of the register address to be set.
+            let register = write.first().copied().ok_or(ImuSpiError::MissingRegister)?;
+
+            let register = register | 0x80;
+
+            self.bus
+                .transaction(&mut [Operation::Write(&[register]), Operation::Read(read)])
+                .await
+                .map_err(ImuSpiError::Bus)
+        }
+    }
+}

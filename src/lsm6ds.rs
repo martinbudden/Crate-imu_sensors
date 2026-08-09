@@ -4,6 +4,7 @@ use vqm::Vector3f32;
 use crate::{
     Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig,
     imu::{AccFullScale, AccUnits, GyroFullScale, GyroUnits},
+    imu_device::ImuDevice,
 };
 
 const I2C_ADDRESS: u8 = 0x6A;
@@ -118,6 +119,25 @@ pub struct Lsm6ds<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,
     pub config: ImuConfig,
+}
+
+impl<B: ImuBus> ImuDevice for Lsm6ds<B> {
+    type Error = B::Error;
+
+    async fn init(
+        &mut self,
+        target_output_data_rate_hz: u32,
+        gyro_sensitivity: GyroFullScale,
+        gyro_units: GyroUnits,
+        acc_sensitivity: AccFullScale,
+        acc_units: AccUnits,
+    ) -> Result<(u32, u32), Self::Error> {
+        Lsm6ds::init(self, target_output_data_rate_hz, gyro_sensitivity, gyro_units, acc_sensitivity, acc_units).await
+    }
+
+    async fn read_acc_gyro(&mut self) -> Result<(Vector3f32, Vector3f32), Self::Error> {
+        <Self as Imu>::read_acc_gyro(self).await
+    }
 }
 
 impl<B: ImuBus> Imu for Lsm6ds<B> {
