@@ -44,6 +44,8 @@ pub use bmi270::Bmi270;
 pub use icm20602::Icm20602;
 pub use imu::{AccFullScale, AccUnits, GyroFullScale, GyroUnits, Imu, ImuCommon, ImuConfig};
 pub use imu_bus::{ImuBus, MockImuBus, SetupError};
+pub use imu_bus_i2c::{ImuI2cBus, ImuI2cError};
+pub use imu_bus_spi::{ImuSpiBus, ImuSpiError};
 pub use imu_device::ImuDevice;
 pub use imu_mock::ImuMock;
 pub use imu426xx::Imu426xx;

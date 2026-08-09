@@ -75,7 +75,7 @@ num_enum = { version = "0.7.6", default-features = false }
 
 # Microcontroller-specific Embassy HAL (Marked optional = true so feature flags work)
 embassy-rp = { version = "0.10.0", default-features = false, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl"], optional = true }
-embassy-stm32 = { version = "0.6.0", default-features = false, features = ["stm32f411cc", "time-driver-any"], optional = true } 
+embassy-stm32 = { version = "0.6.0", default-features = false, optional = true } 
 esp-idf-hal = { version = "0.46.2", default-features = false, optional = true }
 
 # General Embassy HAL (Marked optional = true to support the 'std' feature mapping)
