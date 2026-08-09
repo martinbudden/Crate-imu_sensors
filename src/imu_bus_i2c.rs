@@ -1,24 +1,31 @@
 use crate::ImuBus;
 
 #[allow(unused)]
+#[derive(Debug)]
 pub enum ImuI2cError<E> {
     Bus(E),
     MissingRegister,
 }
+
 impl<E: core::fmt::Debug> core::fmt::Display for ImuI2cError<E> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Bus(error) => write!(f, "IMU I2C error: {error:?}"),
-            Self::MissingRegister => write!(f, "IMU I2C transaction has no register address"),
+            Self::MissingRegister => {
+                write!(f, "IMU I2C transaction has no register address")
+            }
         }
     }
 }
+
 impl<E> From<E> for ImuI2cError<E> {
     fn from(error: E) -> Self {
         Self::Bus(error)
     }
 }
+
 #[allow(unused)]
+#[derive(Debug)]
 pub struct ImuI2cBus<I2C> {
     pub bus: I2C,
 }
@@ -33,6 +40,7 @@ impl<I2C> ImuI2cBus<I2C> {
 impl<I2C> ImuBus for ImuI2cBus<I2C>
 where
     I2C: embedded_hal_async::i2c::I2c,
+    I2C::Error: core::fmt::Debug + core::fmt::Display,
 {
     type Error = ImuI2cError<I2C::Error>;
 

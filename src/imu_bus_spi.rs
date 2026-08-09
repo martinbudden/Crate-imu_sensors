@@ -3,10 +3,12 @@ use embedded_hal_async::spi::{Operation, SpiDevice};
 use crate::imu_bus::ImuBus;
 
 #[allow(unused)]
+#[derive(Debug)]
 pub enum ImuSpiError<E> {
     Bus(E),
     MissingRegister,
 }
+
 impl<E: core::fmt::Debug> core::fmt::Display for ImuSpiError<E> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -15,14 +17,17 @@ impl<E: core::fmt::Debug> core::fmt::Display for ImuSpiError<E> {
         }
     }
 }
+
 impl<E> From<E> for ImuSpiError<E> {
     fn from(error: E) -> Self {
         Self::Bus(error)
     }
 }
+
 #[allow(unused)]
+#[derive(Debug)]
 pub struct ImuSpiBus<SPI> {
-    bus: SPI,
+    pub bus: SPI,
 }
 
 impl<SPI> ImuSpiBus<SPI> {
@@ -35,6 +40,7 @@ impl<SPI> ImuSpiBus<SPI> {
 impl<SPI> ImuBus for ImuSpiBus<SPI>
 where
     SPI: SpiDevice,
+    SPI::Error: core::fmt::Debug + core::fmt::Display,
 {
     type Error = ImuSpiError<SPI::Error>;
 
