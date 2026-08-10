@@ -101,7 +101,7 @@ pub trait Imu {
     type Bus: ImuBus;
     // This forces the IMU error to be the same as the Bus error
     /// The global error type for this IMU, required to be printable and capable of wrapping raw bus transaction failures.
-    type Error: core::fmt::Debug + core::fmt::Display + From<<Self::Bus as ImuBus>::Error>;
+    type Error: core::fmt::Debug + From<<Self::Bus as ImuBus>::Error>;
 
     const TARGET_OUTPUT_DATA_RATE_MAX: u8 = 0;
 

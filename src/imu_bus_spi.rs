@@ -9,15 +9,6 @@ pub enum ImuSpiError<E> {
     MissingRegister,
 }
 
-impl<E: core::fmt::Debug> core::fmt::Display for ImuSpiError<E> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Bus(error) => write!(f, "IMU SPI error: {error:?}"),
-            Self::MissingRegister => write!(f, "IMU SPI transaction has no register address"),
-        }
-    }
-}
-
 impl<E> From<E> for ImuSpiError<E> {
     fn from(error: E) -> Self {
         Self::Bus(error)
@@ -40,7 +31,7 @@ impl<SPI> ImuSpiBus<SPI> {
 impl<SPI> ImuBus for ImuSpiBus<SPI>
 where
     SPI: SpiDevice,
-    SPI::Error: core::fmt::Debug + core::fmt::Display,
+    SPI::Error: core::fmt::Debug,
 {
     type Error = ImuSpiError<SPI::Error>;
 

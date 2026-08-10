@@ -5,7 +5,7 @@ use crate::{AccFullScale, AccUnits, GyroFullScale, GyroUnits};
 #[allow(unused)]
 #[allow(async_fn_in_trait)]
 pub trait ImuDevice {
-    type Error: core::fmt::Debug + core::fmt::Display;
+    type Error: core::fmt::Debug;
 
     async fn init(
         &mut self,
