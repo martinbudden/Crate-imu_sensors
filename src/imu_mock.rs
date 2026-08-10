@@ -1,8 +1,9 @@
 use vqm::Vector3f32;
 
 use crate::{
-    Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuDevice,
+    Imu, ImuAxisOrder, ImuBus, ImuCommon, ImuDevice,
     imu::{AccFullScale, AccUnits, GyroFullScale, GyroUnits},
+    imu_device_config::ImuDeviceConfig,
 };
 
 const REG_ACC_XL: u8 = 0x20;
@@ -23,7 +24,7 @@ const _REG_GYRO_ZH: u8 = 0x2B;
 pub struct ImuMock<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,
-    pub config: ImuConfig,
+    pub config: ImuDeviceConfig,
 }
 
 impl<B: ImuBus> ImuDevice for ImuMock<B> {
@@ -65,7 +66,7 @@ impl<B: ImuBus> Imu for ImuMock<B> {
     }
 
     #[inline]
-    fn config(&self) -> &ImuConfig {
+    fn config(&self) -> &ImuDeviceConfig {
         &self.config
     }
 
@@ -74,7 +75,7 @@ impl<B: ImuBus> Imu for ImuMock<B> {
         #[allow(clippy::expect_used)]
         self.bus().read_registers(0, REG_ACC_XL, &mut buf).await.expect("read_resisters cannot fail for ImuMock");
         let acc = Vector3f32::from_le_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
-        Ok(ImuAxesOrder::map_vector(self.common.axis_order, acc))
+        Ok(ImuAxisOrder::map_vector(self.common.axis_order, acc))
     }
 
     async fn read_gyro(&mut self) -> Result<Vector3f32, Self::Error> {
@@ -82,7 +83,7 @@ impl<B: ImuBus> Imu for ImuMock<B> {
         #[allow(clippy::expect_used)]
         self.bus().read_registers(0, REG_GYRO_XL, &mut buf).await.expect("read_resisters cannot fail for ImuMock");
         let gyro = Vector3f32::from_le_bytes_6(buf) * self.common.gyro_scale - self.common.gyro_offset;
-        Ok(ImuAxesOrder::map_vector(self.common.axis_order, gyro))
+        Ok(ImuAxisOrder::map_vector(self.common.axis_order, gyro))
     }
 
     async fn read_acc_gyro(&mut self) -> Result<(Vector3f32, Vector3f32), Self::Error> {
@@ -96,20 +97,20 @@ impl<B: ImuBus> Imu for ImuMock<B> {
         let gyro_buf = [g0, g1, g2, g3, g4, g5];
         let acc = Vector3f32::from_le_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
         let gyro = Vector3f32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
-        Ok(ImuAxesOrder::map_acc_gyro(self.common.axis_order, acc, gyro))
+        Ok(ImuAxisOrder::map_acc_gyro(self.common.axis_order, acc, gyro))
     }
 }
 
 impl<B: ImuBus> ImuMock<B> {
     /// Constructor.
-    pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
+    pub fn new(bus: B, axis_order: ImuAxisOrder) -> Self {
         Self {
             bus,
             common: ImuCommon::new(axis_order),
-            config: ImuConfig {
-                gyro_id_msp: ImuConfig::MSP_ACC_ID_DEFAULT,
-                acc_id_msp: ImuConfig::MSP_ACC_ID_DEFAULT,
-                axis_order: axis_order.into(),
+            config: ImuDeviceConfig {
+                gyro_id_msp: ImuDeviceConfig::MSP_ACC_ID_DEFAULT,
+                acc_id_msp: ImuDeviceConfig::MSP_ACC_ID_DEFAULT,
+                axis_order,
                 device_id: 0,
                 address: 0,
                 flags: 0,
@@ -209,7 +210,7 @@ mod tests {
     #![allow(clippy::float_cmp)]
 
     use super::*;
-    use crate::{ImuAxesOrder, MockImuBus};
+    use crate::{ImuAxisOrder, MockImuBus};
 
     fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
     fn _is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
@@ -226,7 +227,7 @@ mod tests {
     #[test]
     fn imu_init() {
         let imu_bus = MockImuBus::new();
-        let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxisOrder::XPOS_YPOS_ZPOS);
 
         let result =
             pollster::block_on(imu.init(8000, GyroFullScale::Max, GyroUnits::Dps, AccFullScale::Max, AccUnits::G));
@@ -242,7 +243,7 @@ mod tests {
     #[test]
     fn acc_buf() {
         let imu_bus = MockImuBus::new();
-        let imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxisOrder::XPOS_YPOS_ZPOS);
 
         // TODO: sit down and work out some useful test data for this
         let data: [u8; 6] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
@@ -252,7 +253,7 @@ mod tests {
     #[test]
     fn gyro_buf() {
         let imu_bus = MockImuBus::new();
-        let imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxisOrder::XPOS_YPOS_ZPOS);
 
         // TODO: sit down and work out some useful test data for this
         let data: [u8; 6] = [0x10, 0x00, 0x00, 0x01, 0x00, 0x7f];
@@ -266,7 +267,7 @@ mod tests {
     #[test]
     fn scale_acc() {
         let imu_bus = MockImuBus::new();
-        let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxisOrder::XPOS_YPOS_ZPOS);
 
         let acc_scale = imu.acc_scale() * 32768.0;
         assert_eq!(8.0, acc_scale);
@@ -284,7 +285,7 @@ mod tests {
     #[test]
     fn read_acc() {
         let imu_bus = MockImuBus::new();
-        let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxisOrder::XPOS_YPOS_ZPOS);
 
         let acc = Vector3f32::new(0.5, 2.0, 1.0);
         pollster::block_on(imu.set_acc(acc));
@@ -295,7 +296,7 @@ mod tests {
     #[test]
     fn scale_gyro() {
         let imu_bus = MockImuBus::new();
-        let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxisOrder::XPOS_YPOS_ZPOS);
         let gyro_scale = imu.gyro_scale() * 32768.0;
         assert_eq!(2000.0, gyro_scale);
 
@@ -332,7 +333,7 @@ mod tests {
     #[test]
     fn read_gyro() {
         let imu_bus = MockImuBus::new();
-        let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let mut imu: ImuMock<MockImuBus> = ImuMock::new(imu_bus, ImuAxisOrder::XPOS_YPOS_ZPOS);
         let gyro_scale = imu.gyro_scale() * 32768.0;
         assert_eq!(2000.0, gyro_scale);
 

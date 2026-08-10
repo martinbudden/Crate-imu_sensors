@@ -6,6 +6,12 @@ To run tests on the PC:
 cargo test --no-default-features --features "std,libm" --target x86_64-unknown-linux-gnu
 ```
 
+or
+
+```sh
+cargo test-host
+```
+
 To check with a given target use:
 
 ```sh
@@ -21,7 +27,7 @@ fn map_acc_gyro(&self, buf: [u8; 12]) -> (Vector3f32, Vector3f32) {
     let acc = Vector3f32::from_le_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
     let gyro = Vector3f32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
 
-    ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro)
+    ImuAxisOrder::map_acc_gyro(axis_order, acc, gyro)
 }
 #[inline]
 pub fn map_acc_gyro(&self, buf: [u8; 12]) -> (Vector3f32, Vector3f32) {
@@ -30,7 +36,7 @@ pub fn map_acc_gyro(&self, buf: [u8; 12]) -> (Vector3f32, Vector3f32) {
     let acc = Vector3f32::from_le_slice_6(acc_slice)* self.common.acc_scale - self.common.acc_offset;
     let gyro = Vector3f32::from_le_slice_6(gyro_slice) * self.common.gyro_scale - self.common.gyro_offset;
 
-    ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro)
+    ImuAxisOrder::map_acc_gyro(axis_order, acc, gyro)
 }
 
 #[inline]
@@ -40,7 +46,7 @@ pub fn map_acc_gyro2(&self, buf: [u8; 12]) -> (Vector3f32, Vector3f32) {
     let acc = Vector3f32::from_le_slice_6(acc_slice);
     let gyro = Vector3f32::from_le_slice_6(gyro_slice);
 
-    ImuAxesOrder::map_acc_gyro(axis_order, acc, gyro)
+    ImuAxisOrder::map_acc_gyro(axis_order, acc, gyro)
 }
         /*let acc_buf = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]];
         let _temperature = i16::from_be_bytes([buf[6], buf[7]]);

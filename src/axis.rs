@@ -9,7 +9,7 @@ use strum::EnumIter;
 #[allow(non_camel_case_types)]
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, EnumIter, FromPrimitive, IntoPrimitive)]
-pub enum ImuAxesOrder {
+pub enum ImuAxisOrder {
     #[default]
     XPOS_YPOS_ZPOS = 0,
     YPOS_XNEG_ZPOS = 1, // rotate  90 degrees anticlockwise
@@ -50,21 +50,65 @@ pub enum ImuAxesOrder {
                             //XPOS_YPOS_ZPOS_315 = YNEG_XPOS_ZPOS_45,
 }
 
-impl ImuAxesOrder {
+impl ImuAxisOrder {
+    pub const COUNT: u8 = 27;
+
+    #[must_use]
+    pub fn from_u8(value: u8) -> Self {
+        match value {
+            0 => Self::XPOS_YPOS_ZPOS,
+            1 => Self::YPOS_XNEG_ZPOS,
+            2 => Self::XNEG_YNEG_ZPOS,
+            3 => Self::YNEG_XPOS_ZPOS,
+            4 => Self::XPOS_YNEG_ZNEG,
+            5 => Self::YPOS_XPOS_ZNEG,
+            6 => Self::XNEG_YPOS_ZNEG,
+            7 => Self::YNEG_XNEG_ZNEG,
+
+            8 => Self::ZPOS_YNEG_XPOS,
+            9 => Self::YPOS_ZPOS_XPOS,
+            10 => Self::ZNEG_YPOS_XPOS,
+            11 => Self::YNEG_ZNEG_XPOS,
+
+            12 => Self::ZPOS_YPOS_XNEG,
+            13 => Self::YPOS_ZNEG_XNEG,
+            14 => Self::ZNEG_YNEG_XNEG,
+            15 => Self::YNEG_ZPOS_XNEG,
+
+            16 => Self::ZPOS_XPOS_YPOS,
+            17 => Self::XNEG_ZPOS_YPOS,
+            18 => Self::ZNEG_XNEG_YPOS,
+            19 => Self::XPOS_ZNEG_YPOS,
+
+            20 => Self::ZPOS_XNEG_YNEG,
+            21 => Self::XNEG_ZNEG_YNEG,
+            22 => Self::ZNEG_XPOS_YNEG,
+            23 => Self::XPOS_ZPOS_YNEG,
+
+            24 => Self::XPOS_YPOS_ZPOS_45,
+            25 => Self::YPOS_XNEG_ZPOS_45,
+            26 => Self::XNEG_YNEG_ZPOS_45,
+            27 => Self::YNEG_XPOS_ZPOS_45,
+            _ => Self::default(),
+        }
+    }
+}
+
+impl ImuAxisOrder {
     //    #[rustfmt::skip]
     #[inline]
     #[must_use]
     pub fn map_vector(self, v: Vector3f32) -> Vector3f32 {
         cfg_if! {
-        if #[cfg(feature = "axes_xpos_ypos_zpos")] {
+        if #[cfg(feature = "axis_xpos_ypos_zpos")] {
             v
-        } else if #[cfg(feature = "axes_yneg_xpos_zpos")] {
+        } else if #[cfg(feature = "axis_yneg_xpos_zpos")] {
             Vector3f32 { x: -v.y,  y:  v.x,  z:  v.z }
-        } else if #[cfg(feature = "axes_ypos_xneg_zpos")] {
+        } else if #[cfg(feature = "axis_ypos_xneg_zpos")] {
             Vector3f32 { x:  v.y,  y: -v.x,  z:  v.z }
-        } else if #[cfg(feature = "axes_xneg_yneg_zpos")] {
+        } else if #[cfg(feature = "axis_xneg_yneg_zpos")] {
             Vector3f32 { x: -v.x,  y: -v.y,  z:  v.z }
-        } else if #[cfg(feature = "axes_xpos_zpos_yneg")] {
+        } else if #[cfg(feature = "axis_xpos_zpos_yneg")] {
             Vector3f32 { x:  v.x,  y:  v.z,  z: -v.y }
         } else {
             const SIN45: f32 = core::f32::consts::FRAC_1_SQRT_2;
@@ -119,18 +163,18 @@ impl ImuAxesOrder {
     pub fn map_acc_gyro(self, acc: Vector3f32, gyro: Vector3f32) -> (Vector3f32, Vector3f32) {
         // use a feature flag to hardcode the mapping, so that the match statement can be bypassed for optimal performance.
         cfg_if! {
-                if #[cfg(feature = "axes_xpos_ypos_zpos")] {
+                if #[cfg(feature = "axis_xpos_ypos_zpos")] {
                     (acc, gyro)
-                } else if #[cfg(feature = "axes_yneg_xpos_zpos")] {
+                } else if #[cfg(feature = "axis_yneg_xpos_zpos")] {
                     (Vector3f32 { x:-acc.y,  y: acc.x,  z: acc.z },
                      Vector3f32 { x:-gyro.y, y: gyro.x, z: gyro.z })
-                } else if #[cfg(feature = "axes_ypos_xneg_zpos")] {
+                } else if #[cfg(feature = "axis_ypos_xneg_zpos")] {
                     (Vector3f32 { x: acc.y,  y: -acc.x,  z: acc.z },
                      Vector3f32 { x: gyro.y, y: -gyro.x, z: gyro.z })
-                } else if #[cfg(feature = "axes_xneg_yneg_zpos")] {
+                } else if #[cfg(feature = "axis_xneg_yneg_zpos")] {
                     (Vector3f32 { x:-acc.x,  y: -acc.y,  z: acc.z },
                      Vector3f32 { x:-gyro.x, y: -gyro.y, z: gyro.z })
-                } else if #[cfg(feature = "axes_xpos_zpos_yneg")] {
+                } else if #[cfg(feature = "axis_xpos_zpos_yneg")] {
                     (Vector3f32 { x: acc.x,  y: acc.z,  z: -acc.y },
                      Vector3f32 { x: gyro.x, y: gyro.z, z: -gyro.y })
                 } else {
@@ -237,7 +281,7 @@ impl ImuAxesOrder {
 
     #[must_use]
     #[inline]
-    pub fn axes_order_inverse(self) -> Self {
+    pub fn axis_order_inverse(self) -> Self {
         match self {
             Self::YPOS_XNEG_ZPOS => Self::YNEG_XPOS_ZPOS,
             Self::YNEG_XPOS_ZPOS => Self::YPOS_XNEG_ZPOS,
@@ -273,7 +317,7 @@ mod tests {
 
     #[test]
     fn normal_types() {
-        is_full::<ImuAxesOrder>();
+        is_full::<ImuAxisOrder>();
     }
     #[test]
     fn imu_state_default() {
@@ -284,20 +328,20 @@ mod tests {
     #[test]
     fn map_vector() {
         const INPUT: Vector3f32 = Vector3f32 { x: 2.0, y: 3.0, z: 5.0 };
-        let output = ImuAxesOrder::map_vector(ImuAxesOrder::XPOS_YPOS_ZPOS, INPUT);
+        let output = ImuAxisOrder::map_vector(ImuAxisOrder::XPOS_YPOS_ZPOS, INPUT);
         assert_eq!(Vector3f32 { x: 2.0, y: 3.0, z: 5.0 }, output);
-        let output = ImuAxesOrder::map_vector(ImuAxesOrder::YPOS_XNEG_ZPOS, INPUT);
+        let output = ImuAxisOrder::map_vector(ImuAxisOrder::YPOS_XNEG_ZPOS, INPUT);
         assert_eq!(Vector3f32 { x: 3.0, y: -2.0, z: 5.0 }, output);
     }
     #[test]
-    fn axes_order_inverse() {
-        let input = ImuAxesOrder::XPOS_YPOS_ZPOS;
-        let output = ImuAxesOrder::axes_order_inverse(input);
-        let output_inverse = ImuAxesOrder::axes_order_inverse(output);
+    fn axis_order_inverse() {
+        let input = ImuAxisOrder::XPOS_YPOS_ZPOS;
+        let output = ImuAxisOrder::axis_order_inverse(input);
+        let output_inverse = ImuAxisOrder::axis_order_inverse(output);
         assert_eq!(input, output_inverse);
-        for axis_order in ImuAxesOrder::iter() {
-            let output = ImuAxesOrder::axes_order_inverse(axis_order);
-            let output_inverse = ImuAxesOrder::axes_order_inverse(output);
+        for axis_order in ImuAxisOrder::iter() {
+            let output = ImuAxisOrder::axis_order_inverse(axis_order);
+            let output_inverse = ImuAxisOrder::axis_order_inverse(output);
             assert_eq!(axis_order, output_inverse);
         }
     }

@@ -46,12 +46,12 @@ spi = []
 lsm6ds3tr_c = []
 ism330dhcx = []
 lsm6dsox = []
-# Coordinate Orientation - options to statically map the most common axes orientations.
-axes_xpos_ypos_zpos = []
-axes_ypos_xneg_zpos = []
-axes_xneg_yneg_zpos = []
-axes_yneg_xpos_zpos = []
-axes_xpos_zpos_yneg = []
+# Coordinate Orientation - options to statically map the most common axis orientations.
+axis_xpos_ypos_zpos = []
+axis_ypos_xneg_zpos = []
+axis_xneg_yneg_zpos = []
+axis_yneg_xpos_zpos = []
+axis_xpos_zpos_yneg = []
 
 # Hardware Targets (Select one when building for microcontrollers)
 # The "dep:" prefix activates the optional dependency without exposing it as a feature itself

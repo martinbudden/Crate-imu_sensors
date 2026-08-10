@@ -2,8 +2,9 @@ use embassy_time::{Duration, Timer};
 use vqm::Vector3f32;
 
 use crate::{
-    Imu, ImuAxesOrder, ImuBus, ImuCommon, ImuConfig, ImuDevice,
+    Imu, ImuAxisOrder, ImuBus, ImuCommon, ImuDevice,
     imu::{AccFullScale, AccUnits, GyroFullScale, GyroUnits},
+    imu_device_config::ImuDeviceConfig,
 };
 
 const I2C_ADDRESS: u8 = 0x6A;
@@ -134,7 +135,7 @@ const REG_CMD: u8 = 0x7E;
 pub struct Bmi270<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,
-    pub config: ImuConfig,
+    pub config: ImuDeviceConfig,
 }
 
 impl<B: ImuBus> ImuDevice for Bmi270<B> {
@@ -176,7 +177,7 @@ impl<B: ImuBus> Imu for Bmi270<B> {
     }
 
     #[inline]
-    fn config(&self) -> &ImuConfig {
+    fn config(&self) -> &ImuDeviceConfig {
         &self.config
     }
 
@@ -184,14 +185,14 @@ impl<B: ImuBus> Imu for Bmi270<B> {
         let mut buf = [0u8; 6];
         self.write_read(&[REG_ACC_X_L], &mut buf).await?;
         let acc = Vector3f32::from_le_bytes_6(buf) * self.common.acc_scale - self.common.acc_offset;
-        Ok(ImuAxesOrder::map_vector(self.common.axis_order, acc))
+        Ok(ImuAxisOrder::map_vector(self.common.axis_order, acc))
     }
 
     async fn read_gyro(&mut self) -> Result<Vector3f32, Self::Error> {
         let mut buf = [0u8; 6];
         self.write_read(&[REG_GYRO_X_L], &mut buf).await?;
         let gyro = Vector3f32::from_le_bytes_6(buf) * self.common.gyro_scale - self.common.gyro_offset;
-        Ok(ImuAxesOrder::map_vector(self.common.axis_order, gyro))
+        Ok(ImuAxisOrder::map_vector(self.common.axis_order, gyro))
     }
 
     async fn read_acc_gyro(&mut self) -> Result<(Vector3f32, Vector3f32), Self::Error> {
@@ -204,7 +205,7 @@ impl<B: ImuBus> Imu for Bmi270<B> {
         let gyro_buf = [g0, g1, g2, g3, g4, g5];
         let acc = Vector3f32::from_le_bytes_6(acc_buf) * self.common.acc_scale - self.common.acc_offset;
         let gyro = Vector3f32::from_le_bytes_6(gyro_buf) * self.common.gyro_scale - self.common.gyro_offset;
-        Ok(ImuAxesOrder::map_acc_gyro(self.common.axis_order, acc, gyro))
+        Ok(ImuAxisOrder::map_acc_gyro(self.common.axis_order, acc, gyro))
     }
 }
 
@@ -216,14 +217,14 @@ impl<B: ImuBus> Bmi270<B> {
     const DEVICE_ID: u8 = 0x68;
 
     /// Constructor.
-    pub fn new(bus: B, axis_order: ImuAxesOrder) -> Self {
+    pub fn new(bus: B, axis_order: ImuAxisOrder) -> Self {
         Self {
             bus,
             common: ImuCommon::new(axis_order),
-            config: ImuConfig {
-                gyro_id_msp: ImuConfig::MSP_GYRO_ID_LSM6DSO,
-                acc_id_msp: ImuConfig::MSP_ACC_ID_LSM6DSO,
-                axis_order: axis_order.into(),
+            config: ImuDeviceConfig {
+                gyro_id_msp: ImuDeviceConfig::MSP_GYRO_ID_LSM6DSO,
+                acc_id_msp: ImuDeviceConfig::MSP_ACC_ID_LSM6DSO,
+                axis_order,
                 device_id: Self::DEVICE_ID,
                 address: I2C_ADDRESS,
                 flags: 0,
@@ -856,7 +857,7 @@ mod tests {
     #![allow(clippy::float_cmp)]
 
     use super::*;
-    use crate::{ImuAxesOrder, MockImuBus};
+    use crate::{ImuAxisOrder, MockImuBus};
 
     fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
     fn _is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
@@ -874,7 +875,7 @@ mod tests {
         let mut imu_bus = MockImuBus::new();
         assert_eq!(0, imu_bus.registers[REG_ACC_X_L as usize]);
         imu_bus.registers[REG_ACC_X_L as usize] = 4;
-        let mut imu: Bmi270<MockImuBus> = Bmi270::new(imu_bus, ImuAxesOrder::XPOS_YPOS_ZPOS);
+        let mut imu: Bmi270<MockImuBus> = Bmi270::new(imu_bus, ImuAxisOrder::XPOS_YPOS_ZPOS);
 
         let result =
             pollster::block_on(imu.init(3200, GyroFullScale::Max, GyroUnits::Dps, AccFullScale::Max, AccUnits::G));
