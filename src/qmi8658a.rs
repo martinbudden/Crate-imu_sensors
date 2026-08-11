@@ -2,7 +2,7 @@ use embassy_time::{Duration, Timer};
 use vqm::Vector3f32;
 
 use crate::{
-    Imu, ImuAxisOrder, ImuBus, ImuCommon,
+    Imu, ImuAxisOrder, ImuBus, ImuCommon, ImuDevice,
     imu::{AccFullScale, AccUnits, GyroFullScale, GyroUnits},
     imu_device_config::ImuDeviceConfig,
 };
@@ -55,6 +55,25 @@ pub struct Qmi8658a<B: ImuBus> {
     pub bus: B,
     pub common: ImuCommon,
     pub config: ImuDeviceConfig,
+}
+
+impl<B: ImuBus> ImuDevice for Qmi8658a<B> {
+    type Error = B::Error;
+
+    async fn init(
+        &mut self,
+        target_output_data_rate_hz: u32,
+        gyro_sensitivity: GyroFullScale,
+        gyro_units: GyroUnits,
+        acc_sensitivity: AccFullScale,
+        acc_units: AccUnits,
+    ) -> Result<(u32, u32), Self::Error> {
+        Qmi8658a::init(self, target_output_data_rate_hz, gyro_sensitivity, gyro_units, acc_sensitivity, acc_units).await
+    }
+
+    async fn read_acc_gyro(&mut self) -> Result<(Vector3f32, Vector3f32), Self::Error> {
+        <Self as Imu>::read_acc_gyro(self).await
+    }
 }
 
 impl<B: ImuBus> Imu for Qmi8658a<B> {
