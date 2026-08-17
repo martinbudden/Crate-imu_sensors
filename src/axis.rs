@@ -5,10 +5,17 @@ use cfg_if::cfg_if;
 use num_enum::{FromPrimitive, IntoPrimitive};
 use strum::EnumIter;
 
+#[cfg(feature = "serde")]
+use {
+    sequential_storage::map::PostcardValue,
+    serde::{Deserialize, Serialize},
+};
+
 #[allow(missing_docs)]
 #[allow(non_camel_case_types)]
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, EnumIter, FromPrimitive, IntoPrimitive)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ImuAxisOrder {
     #[default]
     XPOS_YPOS_ZPOS = 0,
@@ -49,6 +56,9 @@ pub enum ImuAxisOrder {
                             //XPOS_YPOS_ZPOS_225 = XNEG_YNEG_ZPOS_45,
                             //XPOS_YPOS_ZPOS_315 = YNEG_XPOS_ZPOS_45,
 }
+
+#[cfg(feature = "serde")]
+impl PostcardValue<'_> for ImuAxisOrder {}
 
 impl ImuAxisOrder {
     pub const COUNT: u8 = 27;
@@ -95,7 +105,7 @@ impl ImuAxisOrder {
 }
 
 impl ImuAxisOrder {
-    //    #[rustfmt::skip]
+    // #[rustfmt::skip]
     #[inline]
     #[must_use]
     pub fn map_vector(self, v: Vector3f32) -> Vector3f32 {

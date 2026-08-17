@@ -23,8 +23,9 @@ all-features = true
 rustc_version = "0.4.1"
 
 [features]
-# Platform Profiles
 default = ["libm", "spi"]
+#default = ["libm", "spi", "serde"]
+
 # std is required for host testing
 std = [
     #"embassy-executor",

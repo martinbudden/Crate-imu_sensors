@@ -1,9 +1,3 @@
-#[cfg(feature = "serde")]
-use {
-    sequential_storage::map::PostcardValue,
-    serde::{Deserialize, Serialize},
-};
-
 use crate::{ImuAxisOrder, ImuBus, imu_device_config::ImuDeviceConfig};
 
 use vqm::Vector3f32;
