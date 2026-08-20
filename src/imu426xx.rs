@@ -235,6 +235,7 @@ impl<B: ImuBus> Imu426xx<B> {
         self.bus.write_register(self.config.address, reg, data).await
     }
 
+    /// Return the gyro and acc sample rates actually set.
     /// # Errors
     pub async fn init(
         &mut self,
