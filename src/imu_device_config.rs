@@ -6,7 +6,6 @@ use {
     serde::{Deserialize, Serialize},
 };
 
-
 // Imu configuration, set on construction and read-only thereafter
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

@@ -9,18 +9,18 @@ use crate::{
 struct Reg;
 
 impl Reg {
-const ACC_XL: u8 = 0x20;
-const _ACC_XH: u8 = 0x21;
-const _ACC_YL: u8 = 0x22;
-const _ACC_YH: u8 = 0x23;
-const _ACC_ZL: u8 = 0x24;
-const _ACC_ZH: u8 = 0x25;
-const GYRO_XL: u8 = 0x26;
-const _GYRO_XH: u8 = 0x27;
-const _GYRO_YL: u8 = 0x28;
-const _GYRO_YH: u8 = 0x29;
-const _GYRO_ZL: u8 = 0x2A;
-const _GYRO_ZH: u8 = 0x2B;
+    const ACC_XL: u8 = 0x20;
+    const _ACC_XH: u8 = 0x21;
+    const _ACC_YL: u8 = 0x22;
+    const _ACC_YH: u8 = 0x23;
+    const _ACC_ZL: u8 = 0x24;
+    const _ACC_ZH: u8 = 0x25;
+    const GYRO_XL: u8 = 0x26;
+    const _GYRO_XH: u8 = 0x27;
+    const _GYRO_YL: u8 = 0x28;
+    const _GYRO_YH: u8 = 0x29;
+    const _GYRO_ZL: u8 = 0x2A;
+    const _GYRO_ZH: u8 = 0x2B;
 }
 
 #[allow(missing_docs)]
@@ -238,8 +238,8 @@ mod tests {
             pollster::block_on(imu.init(8000, GyroFullScale::Max, GyroUnits::Dps, AccFullScale::Max, AccUnits::G));
         let (gyro_register_value, acc_register_value) = result.unwrap();
 
-        assert_eq!(0, gyro_register_value);
-        assert_eq!(0, acc_register_value);
+        assert_eq!(8000, gyro_register_value);
+        assert_eq!(1000, acc_register_value);
         //assert_eq!(2000.0 / 32768.0, state.gyro_scale);
         //assert_eq!(16.0 / 32768.0, state.acc_scale);
         //assert_eq!(6664, state.gyro_sample_rate_hz);
@@ -281,7 +281,7 @@ mod tests {
         pollster::block_on(imu.set_acc(acc));
 
         let mut buf = [0u8; 6];
-        let _result = pollster::block_on(imu.bus().read_registers(0, REG_ACC_XL, &mut buf));
+        let _result = pollster::block_on(imu.bus().read_registers(0, Reg::ACC_XL, &mut buf));
         assert_eq!([0x00, 0x08, 0x00, 0x20, 0x00, 0x10], buf);
 
         let a = Vector3f32::from_le_bytes_6(buf) * imu.common.acc_scale - imu.common.acc_offset;
@@ -309,28 +309,28 @@ mod tests {
 
         let gyro = Vector3f32::new(125.0, 1000.0, 1750.0);
         pollster::block_on(imu.set_gyro(gyro));
-        let _result = pollster::block_on(imu.bus().read_registers(0, REG_GYRO_XL, &mut buf));
+        let _result = pollster::block_on(imu.bus().read_registers(0, Reg::GYRO_XL, &mut buf));
         assert_eq!([0x00, 0x08, 0x00, 0x40, 0x00, 0x70], buf);
         let g = Vector3f32::from_le_bytes_6(buf) * imu.common.gyro_scale - imu.common.gyro_offset;
         assert_eq!(Vector3f32 { x: 125.0, y: 1000.0, z: 1750.0 }, g);
 
         let gyro = Vector3f32::new(500.0, 1000.0, 2000.0);
         pollster::block_on(imu.set_gyro(gyro));
-        let _result = pollster::block_on(imu.bus().read_registers(0, REG_GYRO_XL, &mut buf));
+        let _result = pollster::block_on(imu.bus().read_registers(0, Reg::GYRO_XL, &mut buf));
         assert_eq!([0x00, 0x20, 0x00, 0x40, 0xFF, 0x7F], buf);
         let g = Vector3f32::from_le_bytes_6(buf) * imu.common.gyro_scale - imu.common.gyro_offset;
         assert_eq!(Vector3f32 { x: 500.0, y: 1000.0, z: 1999.939 }, g);
 
         let gyro = Vector3f32::new(2000.0, 4000.0, 10_000.0);
         pollster::block_on(imu.set_gyro(gyro));
-        let _result = pollster::block_on(imu.bus().read_registers(0, REG_GYRO_XL, &mut buf));
+        let _result = pollster::block_on(imu.bus().read_registers(0, Reg::GYRO_XL, &mut buf));
         assert_eq!([0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F], buf);
         let g = Vector3f32::from_le_bytes_6(buf) * imu.common.gyro_scale - imu.common.gyro_offset;
         assert_eq!(Vector3f32 { x: 1999.939, y: 1999.939, z: 1999.939 }, g);
 
         let gyro = Vector3f32::new(-2000.0, -4000.0, -10_000.0);
         pollster::block_on(imu.set_gyro(gyro));
-        let _result = pollster::block_on(imu.bus().read_registers(0, REG_GYRO_XL, &mut buf));
+        let _result = pollster::block_on(imu.bus().read_registers(0, Reg::GYRO_XL, &mut buf));
         assert_eq!([0x00, 0x80, 0x00, 0x80, 0x00, 0x80], buf);
         let g = Vector3f32::from_le_bytes_6(buf) * imu.common.gyro_scale - imu.common.gyro_offset;
         assert_eq!(Vector3f32 { x: -2000.0, y: -2000.0, z: -2000.0 }, g);

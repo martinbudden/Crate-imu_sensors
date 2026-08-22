@@ -102,6 +102,11 @@ impl ImuAxisOrder {
             _ => Self::default(),
         }
     }
+
+    #[must_use]
+    pub fn try_from_u8(value: u8) -> Option<Self> {
+        if value > Self::COUNT { None } else { Some(Self::from(value)) }
+    }
 }
 
 impl ImuAxisOrder {

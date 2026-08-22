@@ -7,7 +7,6 @@ pub enum ImuI2cError<E> {
     MissingRegister,
 }
 
-
 impl<E> From<E> for ImuI2cError<E> {
     fn from(error: E) -> Self {
         Self::Bus(error)
