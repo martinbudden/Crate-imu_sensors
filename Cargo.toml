@@ -72,7 +72,7 @@ vqm = { git = "https://github.com/martinbudden/crate-vector-quaternion-matrix" }
 
 cfg-if = "1.0.4"
 strum = { version = "0.28.0", default-features = false, features = ["derive"] }
-num_enum = { version = "0.7.6", default-features = false }
+#num_enum = { version = "0.7.6", default-features = false }
 
 # Microcontroller-specific Embassy HAL (Marked optional = true so feature flags work)
 embassy-rp = { version = "0.10.0", default-features = false, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl"], optional = true }

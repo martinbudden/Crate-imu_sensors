@@ -2,7 +2,7 @@
 use vqm::Vector3f32;
 
 use cfg_if::cfg_if;
-use num_enum::{FromPrimitive, IntoPrimitive};
+#[cfg(feature = "std")]
 use strum::EnumIter;
 
 #[cfg(feature = "serde")]
@@ -14,8 +14,9 @@ use {
 #[allow(missing_docs)]
 #[allow(non_camel_case_types)]
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, EnumIter, FromPrimitive, IntoPrimitive)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", derive(EnumIter))]
 pub enum ImuAxisOrder {
     #[default]
     XPOS_YPOS_ZPOS = 0,
@@ -101,11 +102,6 @@ impl ImuAxisOrder {
             27 => Self::YNEG_XPOS_ZPOS_45,
             _ => Self::default(),
         }
-    }
-
-    #[must_use]
-    pub fn try_from_u8(value: u8) -> Option<Self> {
-        if value > Self::COUNT { None } else { Some(Self::from(value)) }
     }
 }
 
@@ -321,6 +317,28 @@ impl ImuAxisOrder {
     }
 }
 
+impl TryFrom<u8> for ImuAxisOrder {
+    type Error = ();
+
+    /// Validating conversion, invalid values return error.
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        let default = Self::default();
+
+        if value == default as u8 {
+            // The input was actually the default value.
+            Ok(default)
+        } else {
+            let ret = Self::from_u8(value);
+            if ret == default {
+                // The input was invalid and got converted to the default.
+                Err(())
+            } else {
+                Ok(ret)
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -328,11 +346,12 @@ mod tests {
     use strum::IntoEnumIterator;
 
     fn _is_normal<T: Sized + Send + Sync + Unpin>() {}
-    fn is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
+    fn _is_full<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + PartialEq>() {}
+    fn is_full_eq<T: Sized + Send + Sync + Unpin + Copy + Clone + Default + Eq + PartialEq>() {}
 
     #[test]
     fn normal_types() {
-        is_full::<ImuAxisOrder>();
+        is_full_eq::<ImuAxisOrder>();
     }
     #[test]
     fn imu_state_default() {
