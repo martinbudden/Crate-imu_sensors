@@ -7,6 +7,7 @@ use strum::EnumIter;
 
 #[cfg(feature = "serde")]
 use {
+    postcard::experimental::max_size::MaxSize,
     sequential_storage::map::PostcardValue,
     serde::{Deserialize, Serialize},
 };
@@ -15,7 +16,7 @@ use {
 #[allow(non_camel_case_types)]
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize, MaxSize))]
 #[cfg_attr(feature = "std", derive(EnumIter))]
 pub enum ImuAxisOrder {
     #[default]
