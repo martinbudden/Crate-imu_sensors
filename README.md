@@ -40,8 +40,7 @@ these flight controllers can be repurposed for other projects.
 
 ## Dependencies
 
-This library uses the [vqm(vector quaternion matrix) crate](https://github.com/martinbudden/crate-vector_quaternion_matrix)
-for its `Vector3f32`, `Vector3i32`, and `Quaternion` classes.
+This library uses the [vqm(vector quaternion matrix) crate](https://github.com/martinbudden/crate-vector_quaternion_matrix) for its `Vector3f32` classes.
 
 ## Original implementation
 
