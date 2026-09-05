@@ -9,6 +9,12 @@ that is each release may contain incompatible API changes.
 
 Once the API has stabilized this project will adopt semantic versioning, the first release to do so will be `0.2.0`.
 
+## [0.1.4] - 2026-09-05
+
+### Changed
+
+- updated to `vqm` `0.1.16`.
+
 ## [0.1.3] - 2026-08-04
 
 ### Added
@@ -22,7 +28,7 @@ Once the API has stabilized this project will adopt semantic versioning, the fir
 
 ### Changed
 
-- updated to `vqm` 0.1.14.
+- updated to `vqm` `0.1.14`.
 - set gyro and acc scales in `init`.
 - improved documentation.
 - moved `map_acc`, `map_gyro`, and `map_acc_gyro` functions into `Imu` trait.
@@ -34,12 +40,6 @@ Once the API has stabilized this project will adopt semantic versioning, the fir
 
 - `axis_order` parameter from `map_acc`, `map_gyro` etc functions.
 
-### Deprecated
-
-### Fixed
-
-### Security
-
 ## [0.1.2] - 2026-05-24
 
 ### Added
@@ -48,7 +48,7 @@ Once the API has stabilized this project will adopt semantic versioning, the fir
 
 ### Changed
 
-- updated to `vqm` 0.1.9.
+- updated to `vqm` `0.1.9`.
 - made `serde` an optional feature.
 - Changed Apache license to standard unabridged text.
 
@@ -62,7 +62,7 @@ Once the API has stabilized this project will adopt semantic versioning, the fir
 ### Changed
 
 - all features are now lower case.
-- updated to `vqm` 0.1.3.
+- updated to `vqm` `0.1.3`.
 - improved gyro scaling for DPS and RPS (degrees and radians per second).
 
 ### Removed
